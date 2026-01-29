@@ -5,6 +5,7 @@ import Register from '../pages/Auth/Register';
 import AdminLayout from '../pages/Admin/Layout';
 import ProtectedRoute from './ProtectedRoute';
 import AdminUsers from '../pages/Admin/Users/AdminUsers';
+import AdminClasses from '../pages/Admin/Classes/AdminClasses';
 
 // Temporary placeholder for other roles
 const RoleDashboard = ({ role }) => (
@@ -29,6 +30,7 @@ const AppRoutes = () => {
           <Route index element={<Navigate to="dashboard" />} />
           <Route path="dashboard" element={<div>Admin Dashboard Content</div>} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="classes" element={<AdminClasses />} /> 
         </Route>
       </Route>
 

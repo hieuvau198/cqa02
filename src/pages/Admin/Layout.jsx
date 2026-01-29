@@ -3,6 +3,7 @@ import { Layout, Menu, Button, theme } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
+  ReadOutlined, 
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined
@@ -52,6 +53,11 @@ const AdminLayout = () => {
               key: '/admin/users',
               icon: <UserOutlined />,
               label: 'Users',
+            },
+            {
+                key: '/admin/classes', // <-- Add this item
+                icon: <ReadOutlined />,
+                label: 'Classes',
             },
             {
               key: 'logout',
