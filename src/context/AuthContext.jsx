@@ -3,15 +3,16 @@ import { createContext, useState, useContext, useEffect } from 'react';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-
-  // Optional: Persist session on refresh using localStorage
-  useEffect(() => {
-    const storedUser = localStorage.VX_USER_SESSION;
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // FIX: Initialize state directly from localStorage so it's available on first render
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem("VX_USER_SESSION");
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+      console.error("Failed to parse user session", error);
+      return null;
     }
-  }, []);
+  });
 
   const login = (userData) => {
     setUser(userData);
@@ -22,6 +23,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem("VX_USER_SESSION");
   };
+
+  // We no longer need the useEffect for initial retrieval
+  // But if you want to sync state changes across tabs, you could listen to storage events (optional)
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

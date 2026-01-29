@@ -121,6 +121,11 @@ export default function AdminClasses() {
     else message.error(result.message);
   };
 
+  const handleClassClick = (cls) => {
+    // Open in new tab
+    window.open(`/admin/classes/${cls.id}`, '_blank');
+  };
+
   // --- Render Helpers ---
 
   const renderList = (title, data, type, selectedId, onSelect, parentSelected) => (
@@ -171,7 +176,8 @@ export default function AdminClasses() {
           {renderList("Kỳ học", terms, 'term', selectedTerm?.id, handleSelectTerm, !!selectedYear)}
         </Col>
         <Col xs={24} md={8}>
-          {renderList("Lớp học", classes, 'class', null, null, !!selectedTerm)}
+          {/* CHANGE: Pass handleClassClick here */}
+          {renderList("Lớp học", classes, 'class', null, handleClassClick, !!selectedTerm)}
         </Col>
       </Row>
 

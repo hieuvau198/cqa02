@@ -71,8 +71,9 @@ export const handleRegisterLogic = async (name, username, password, role) => {
       createdAt: serverTimestamp()
     };
 
-    await addDoc(USERS_COLLECTION_REF, newUser);
-    return { success: true };
+    // CHANGE: Capture the reference to get the ID
+    const docRef = await addDoc(USERS_COLLECTION_REF, newUser);
+    return { success: true, id: docRef.id }; 
   } catch (error) {
     console.error("Register Error:", error);
     return { success: false, message: "Registration failed. Try again." };

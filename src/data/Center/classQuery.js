@@ -4,13 +4,15 @@ import {
   collection, 
   query, 
   where, 
-  getDocs, 
+  getDocs,
+  getDoc, 
   addDoc, 
   updateDoc, 
   deleteDoc, 
   doc, 
   serverTimestamp 
 } from "firebase/firestore";
+import { handleRegisterLogic, updateUser, deleteUser } from "../Users/userQuery"; // Import User Logic
 
 // --- Collection References ---
 // Using the same structure pattern as your userQuery: cqa02 -> app_data -> [collection]
@@ -141,6 +143,102 @@ export const updateClass = async (id, data) => {
 export const deleteClass = async (id) => {
   try {
     await deleteDoc(doc(CLASSES_REF, id));
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// ==============================
+// 4. STUDENT IN CLASS LOGIC
+// ==============================
+
+// Get Class Details
+export const getClassById = async (id) => {
+  try {
+    const docRef = doc(CLASSES_REF, id);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) return { id: snapshot.id, ...snapshot.data() };
+    return null;
+  } catch (error) {
+    console.error("Error getting class:", error);
+    return null;
+  }
+};
+
+// Get All Students in a Class
+export const getStudentsInClass = async (classId) => {
+  try {
+    // Reference to the subcollection storing the link
+    const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
+    const snapshot = await getDocs(studentsRef);
+    
+    // Fetch full user details for each student linked
+    const students = await Promise.all(snapshot.docs.map(async (relationDoc) => {
+        const userId = relationDoc.data().userId;
+        const userRef = doc(db, "cqa02", "app_data", "users", userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            return { 
+                id: userId, 
+                ...userSnap.data(), 
+                relationId: relationDoc.id // Keep track of the link ID for deletion
+            };
+        }
+        return null; // User might have been deleted manually
+    }));
+    
+    return students.filter(s => s !== null);
+  } catch (error) {
+    console.error("Error fetching class students:", error);
+    return [];
+  }
+};
+
+// Add New Student to Class (Creates User + Creates Link)
+export const addStudentToClass = async (classId, studentData) => {
+  try {
+    // 1. Create the User account (Role is 'Student')
+    const result = await handleRegisterLogic(
+        studentData.name, 
+        studentData.username, 
+        studentData.password, 
+        'Student'
+    );
+    
+    if (!result.success) return result;
+    
+    const newUserId = result.id;
+    
+    // 2. Link User to Class in subcollection
+    const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
+    await addDoc(studentsRef, { 
+        userId: newUserId, 
+        joinedAt: serverTimestamp() 
+    });
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Update Student (Wraps user update)
+export const updateStudentInClass = async (userId, data) => {
+    return await updateUser(userId, data);
+};
+
+// Delete Student from Class (Removes Link + Deletes User Account)
+export const deleteStudentFromClass = async (classId, userId, relationId) => {
+  try {
+    // 1. Delete the link in class
+    if (relationId) {
+         await deleteDoc(doc(db, "cqa02", "app_data", "classes", classId, "students", relationId));
+    }
+    
+    // 2. Delete the User account
+    await deleteUser(userId);
+    
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
