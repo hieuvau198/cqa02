@@ -1,74 +1,100 @@
-import { useState } from 'react';
+import { Form, Input, Button, Card, Select, Alert, Typography, message } from 'antd';
 import { handleRegisterLogic } from '../../data/Firebase/firebaseQuery';
+import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
 
-export default function Register({ onNavigateToLogin }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    username: '',
-    password: '',
-    role: 'Student'
-  });
+const { Title } = Typography;
+const { Option } = Select;
+
+export default function Register() {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onFinish = async (values) => {
+    setLoading(true);
     setError('');
-    setSuccess('');
 
     const result = await handleRegisterLogic(
-      formData.name,
-      formData.username,
-      formData.password,
-      formData.role
+      values.name,
+      values.username,
+      values.password,
+      values.role
     );
 
     if (result.success) {
-      setSuccess("Account created! Redirecting...");
-      setTimeout(() => onNavigateToLogin(), 1500);
+      message.success("Account created successfully!");
+      navigate('/login');
     } else {
       setError(result.message);
     }
+    setLoading(false);
   };
 
   return (
-    <div className="auth-container">
-      <div className="card">
-        <h2>Register</h2>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label>Full Name</label>
-          <input name="name" type="text" onChange={handleChange} required />
-          
-          <label>Username</label>
-          <input name="username" type="text" onChange={handleChange} required />
-          
-          <label>Password</label>
-          <input name="password" type="password" onChange={handleChange} required />
-          
-          <label>Role</label>
-          <select name="role" value={formData.role} onChange={handleChange}>
-            <option value="Student">Student</option>
-            <option value="Teacher">Teacher</option>
-            <option value="Staff">Staff</option>
-            <option value="Admin">Admin</option>
-          </select>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
+      <Card style={{ width: 450, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Title level={2}>Create Account</Title>
+        </div>
 
-          {error && <p className="error-text">{error}</p>}
-          {success && <p className="success-text">{success}</p>}
-          
-          <button type="submit">Register</button>
-        </form>
-        <p>
-          Already have an account? 
-          <button className="link-btn" onClick={onNavigateToLogin}>
-            Login
-          </button>
-        </p>
-      </div>
+        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+
+        <Form
+          name="register_form"
+          onFinish={onFinish}
+          layout="vertical"
+          size="large"
+          initialValues={{ role: 'Student' }}
+        >
+          <Form.Item
+            name="name"
+            label="Full Name"
+            rules={[{ required: true, message: 'Please input your full name!' }]}
+          >
+            <Input placeholder="John Doe" />
+          </Form.Item>
+
+          <Form.Item
+            name="username"
+            label="Username"
+            rules={[{ required: true, message: 'Please input a username!' }]}
+          >
+            <Input placeholder="johndoe123" />
+          </Form.Item>
+
+          <Form.Item
+            name="password"
+            label="Password"
+            rules={[{ required: true, message: 'Please input your password!' }]}
+          >
+            <Input.Password placeholder="Password" />
+          </Form.Item>
+
+          <Form.Item
+            name="role"
+            label="Role"
+            rules={[{ required: true, message: 'Please select a role!' }]}
+          >
+            <Select>
+              <Option value="Student">Student</Option>
+              <Option value="Teacher">Teacher</Option>
+              <Option value="Staff">Staff</Option>
+              <Option value="Admin">Admin</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} block>
+              Register
+            </Button>
+          </Form.Item>
+
+          <div style={{ textAlign: 'center' }}>
+            Already have an account? <Link to="/login">Login</Link>
+          </div>
+        </Form>
+      </Card>
     </div>
   );
 }
