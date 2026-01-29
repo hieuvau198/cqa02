@@ -1,8 +1,8 @@
 // src/pages/Admin/Classes/partials/ClassMembers.jsx
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Button, Space, Drawer, Form, Input, message, Popconfirm, Radio, Select } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
-import * as ClassQuery from '../../../../data/Center/classQuery'; // Adjust path
+import { Table, Button, Space, Drawer, Form, Input, message, Popconfirm, Radio, Select, Tag, Divider, Row, Col } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, PhoneOutlined, HomeOutlined, BankOutlined } from '@ant-design/icons';
+import * as ClassMember from '../../../../data/Center/classMember'; // New Import
 
 const { Option } = Select;
 
@@ -19,13 +19,13 @@ export default function ClassMembers({ classId }) {
 
   const fetchStudents = async () => {
     setLoading(true);
-    const stds = await ClassQuery.getStudentsInClass(classId);
+    const stds = await ClassMember.getClassMembers(classId);
     setStudents(stds);
     setLoading(false);
   };
 
   const fetchCandidates = async () => {
-    const users = await ClassQuery.getAllStudentCandidates();
+    const users = await ClassMember.getStudentCandidates();
     setCandidates(users);
   };
 
@@ -45,6 +45,7 @@ export default function ClassMembers({ classId }) {
       form.setFieldsValue(student);
     } else {
       form.resetFields();
+      form.setFieldsValue({ status: 'Đang học' }); // Default
       await fetchCandidates();
     }
     setDrawerVisible(true);
@@ -55,17 +56,19 @@ export default function ClassMembers({ classId }) {
     let result;
 
     if (editingStudent) {
-      result = await ClassQuery.updateStudentInClass(editingStudent.id, values);
+      // Update
+      result = await ClassMember.updateMember(classId, editingStudent.id, editingStudent.relationId, values);
     } else {
+      // Add
       if (addMode === 'existing') {
-        result = await ClassQuery.addExistingStudentToClass(classId, values.userId);
+        result = await ClassMember.addMemberExisting(classId, values.userId, values.status);
       } else {
-        result = await ClassQuery.addStudentToClass(classId, values);
+        result = await ClassMember.addMemberNew(classId, values);
       }
     }
 
     if (result.success) {
-      message.success(editingStudent ? "Student updated" : "Student added");
+      message.success(editingStudent ? "Thông tin đã cập nhật" : "Đã thêm học sinh");
       setDrawerVisible(false);
       fetchStudents();
     } else {
@@ -75,9 +78,9 @@ export default function ClassMembers({ classId }) {
   };
 
   const handleDelete = async (student) => {
-    const result = await ClassQuery.deleteStudentFromClass(classId, student.id, student.relationId);
+    const result = await ClassMember.deleteMember(classId, student.relationId);
     if (result.success) {
-      message.success("Student removed from class");
+      message.success("Đã xóa học sinh khỏi lớp");
       fetchStudents();
     } else {
       message.error(result.message);
@@ -85,18 +88,59 @@ export default function ClassMembers({ classId }) {
   };
 
   const columns = [
-    { title: 'Name', dataIndex: 'name', key: 'name' },
-    { title: 'Username', dataIndex: 'username', key: 'username' },
-    { title: 'Password', dataIndex: 'password', key: 'password', render: (text) => <code>{text}</code> },
+    { 
+      title: 'Họ tên & Tài khoản', 
+      key: 'info',
+      render: (_, r) => (
+        <div>
+          <div style={{ fontWeight: 'bold' }}>{r.name}</div>
+          <div style={{ color: '#888', fontSize: '12px' }}>@{r.username}</div>
+        </div>
+      )
+    },
     {
-      title: 'Actions',
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        let color = 'default';
+        if (status === 'Đang học') color = 'green';
+        if (status === 'Đã nghỉ') color = 'red';
+        if (status === 'Hoàn thành lớp học') color = 'blue';
+        return <Tag color={color}>{status}</Tag>;
+      }
+    },
+    { 
+      title: 'Phụ huynh', 
+      key: 'parent',
+      render: (_, r) => (
+        <div>
+          {r.parentName ? <div>{r.parentName}</div> : <span style={{color:'#ccc'}}>--</span>}
+          {r.parentPhone && <div><PhoneOutlined /> {r.parentPhone}</div>}
+        </div>
+      )
+    },
+    { 
+      title: 'Thông tin thêm', 
+      key: 'details',
+      responsive: ['lg'],
+      render: (_, r) => (
+         <div style={{ fontSize: '12px' }}>
+            {r.officialSchool && <div><BankOutlined /> {r.officialSchool}</div>}
+            {r.address && <div><HomeOutlined /> {r.address}</div>}
+         </div>
+      )
+    },
+    {
+      title: 'Hành động',
       key: 'action',
+      width: 100,
       render: (_, record) => (
         <Space>
           <Button icon={<EditOutlined />} onClick={() => showDrawer(record)} />
           <Popconfirm 
-            title="Remove Student?" 
-            description="This will remove the student from this class but keep their account."
+            title="Xóa khỏi lớp?" 
+            description="Học sinh sẽ bị xóa khỏi danh sách lớp này."
             onConfirm={() => handleDelete(record)}
           >
             <Button danger icon={<DeleteOutlined />} />
@@ -123,57 +167,104 @@ export default function ClassMembers({ classId }) {
       />
 
       <Drawer
-        title={editingStudent ? "Edit Student" : "Add Student"}
-        width={400}
+        title={editingStudent ? "Cập nhật thông tin" : "Thêm học sinh mới"}
+        width={480}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
         {!editingStudent && (
              <div style={{ marginBottom: 20, textAlign: 'center' }}>
                  <Radio.Group value={addMode} onChange={e => setAddMode(e.target.value)} buttonStyle="solid">
-                    <Radio.Button value="existing">Existing Account</Radio.Button>
-                    <Radio.Button value="new">Create New</Radio.Button>
+                    <Radio.Button value="new">Tạo tài khoản mới</Radio.Button>
+                    <Radio.Button value="existing">Chọn tài khoản có sẵn</Radio.Button>
                  </Radio.Group>
              </div>
         )}
 
         <Form layout="vertical" form={form} onFinish={handleSave}>
-          {(addMode === 'new' || editingStudent) && (
+            {/* Status Field - Always Visible */}
+            <Form.Item name="status" label="Trạng thái học tập" rules={[{ required: true }]}>
+                <Select>
+                    <Option value="Đang học">Đang học</Option>
+                    <Option value="Đã nghỉ">Đã nghỉ</Option>
+                    <Option value="Hoàn thành lớp học">Hoàn thành lớp học</Option>
+                </Select>
+            </Form.Item>
+
+            <Divider dashed />
+
+            {/* Existing User Mode */}
+            {(!editingStudent && addMode === 'existing') && (
+                <Form.Item name="userId" label="Chọn học sinh" rules={[{ required: true, message: 'Vui lòng chọn học sinh' }]}>
+                    <Select 
+                        placeholder="Tìm kiếm theo tên hoặc username"
+                        showSearch
+                        optionFilterProp="children"
+                        filterOption={(input, option) =>
+                            (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                    >
+                        {availableCandidates.map(u => (
+                            <Option key={u.id} value={u.id}>
+                                {u.name} ({u.username})
+                            </Option>
+                        ))}
+                    </Select>
+                </Form.Item>
+            )}
+
+            {/* New User Mode OR Editing */}
+            {(addMode === 'new' || editingStudent) && (
             <>
-                <Form.Item name="name" label="Full Name" rules={[{ required: true }]}>
-                    <Input prefix={<UserOutlined />} placeholder="Full Name" />
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item name="name" label="Họ và tên" rules={[{ required: true }]}>
+                            <Input prefix={<UserOutlined />} placeholder="Ví dụ: Nguyễn Văn A" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                         <Form.Item name="username" label="Tên đăng nhập" rules={[{ required: true }]}>
+                            <Input placeholder="username" disabled={!!editingStudent} />
+                        </Form.Item>
+                    </Col>
+                </Row>
+                
+                {!editingStudent && (
+                    <Form.Item name="password" label="Mật khẩu" rules={[{ required: true }]}>
+                        <Input.Password placeholder="Nhập mật khẩu" />
+                    </Form.Item>
+                )}
+
+                <Divider orientation="left">Thông tin cá nhân</Divider>
+
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item name="parentName" label="Tên phụ huynh">
+                            <Input placeholder="Tên cha/mẹ" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item name="parentPhone" label="SĐT Phụ huynh">
+                            <Input prefix={<PhoneOutlined />} placeholder="09xxx..." />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Form.Item name="officialSchool" label="Trường đang học">
+                    <Input prefix={<BankOutlined />} placeholder="Ví dụ: THPT Chuyên..." />
                 </Form.Item>
-                <Form.Item name="username" label="Username" rules={[{ required: true }]}>
-                    <Input placeholder="Username" disabled={!!editingStudent} />
-                </Form.Item>
-                <Form.Item name="password" label="Password" rules={[{ required: !editingStudent }]}>
-                    <Input.Password placeholder="Password" />
+
+                <Form.Item name="address" label="Địa chỉ nhà">
+                    <Input prefix={<HomeOutlined />} placeholder="Số nhà, đường, quận..." />
                 </Form.Item>
             </>
-          )}
+            )}
 
-          {(!editingStudent && addMode === 'existing') && (
-             <Form.Item name="userId" label="Select Student" rules={[{ required: true, message: 'Please select a student' }]}>
-                <Select 
-                    placeholder="Search for a student"
-                    showSearch
-                    optionFilterProp="children"
-                    filterOption={(input, option) =>
-                        (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
-                    }
-                >
-                    {availableCandidates.map(u => (
-                        <Option key={u.id} value={u.id}>
-                            {u.name} ({u.username})
-                        </Option>
-                    ))}
-                </Select>
-             </Form.Item>
-          )}
-
-          <Button type="primary" htmlType="submit" block loading={loading} style={{ marginTop: 10 }}>
-            {editingStudent ? "Update Info" : (addMode === 'existing' ? "Add to Class" : "Create & Add")}
-          </Button>
+            <div style={{ marginTop: 24 }}>
+                <Button type="primary" htmlType="submit" block loading={loading} size="large">
+                    {editingStudent ? "Lưu thay đổi" : (addMode === 'existing' ? "Thêm vào lớp" : "Tạo & Thêm")}
+                </Button>
+            </div>
         </Form>
       </Drawer>
     </div>
