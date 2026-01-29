@@ -12,13 +12,15 @@ import {
   doc, 
   serverTimestamp 
 } from "firebase/firestore";
-import { handleRegisterLogic, updateUser, deleteUser } from "../Users/userQuery"; // Import User Logic
+import { handleRegisterLogic, updateUser, deleteUser, getAllUsers } from "../Users/userQuery"; 
 
 // --- Collection References ---
-// Using the same structure pattern as your userQuery: cqa02 -> app_data -> [collection]
 const YEARS_REF = collection(db, "cqa02", "app_data", "years");
 const TERMS_REF = collection(db, "cqa02", "app_data", "terms");
 const CLASSES_REF = collection(db, "cqa02", "app_data", "classes");
+
+// Helper for Natural Sort (e.g. handles "Term 1", "Term 2", "Term 10" correctly)
+const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
 // ==============================
 // 1. OPERATING YEARS CRUD
@@ -27,10 +29,10 @@ const CLASSES_REF = collection(db, "cqa02", "app_data", "classes");
 export const getAllYears = async () => {
   try {
     const snapshot = await getDocs(YEARS_REF);
-    // Sort by name (e.g., 2024-2025) descending typically
+    // Sort descending (2025, 2024...)
     return snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => b.name.localeCompare(a.name));
+      .sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
   } catch (error) {
     console.error("Error fetching years:", error);
     return [];
@@ -57,7 +59,6 @@ export const updateYear = async (id, data) => {
 
 export const deleteYear = async (id) => {
   try {
-    // Note: In a real app, you might want to check for existing terms first
     await deleteDoc(doc(YEARS_REF, id));
     return { success: true };
   } catch (error) {
@@ -73,7 +74,10 @@ export const getTermsByYear = async (yearId) => {
   try {
     const q = query(TERMS_REF, where("yearId", "==", yearId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sort ascending (Thang 1, Thang 2...)
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort(naturalSort);
   } catch (error) {
     console.error("Error fetching terms:", error);
     return [];
@@ -115,7 +119,10 @@ export const getClassesByTerm = async (termId) => {
   try {
     const q = query(CLASSES_REF, where("termId", "==", termId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sort ascending (Class 1, Class 2...)
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort(naturalSort);
   } catch (error) {
     console.error("Error fetching classes:", error);
     return [];
@@ -169,11 +176,9 @@ export const getClassById = async (id) => {
 // Get All Students in a Class
 export const getStudentsInClass = async (classId) => {
   try {
-    // Reference to the subcollection storing the link
     const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
     const snapshot = await getDocs(studentsRef);
     
-    // Fetch full user details for each student linked
     const students = await Promise.all(snapshot.docs.map(async (relationDoc) => {
         const userId = relationDoc.data().userId;
         const userRef = doc(db, "cqa02", "app_data", "users", userId);
@@ -182,23 +187,33 @@ export const getStudentsInClass = async (classId) => {
             return { 
                 id: userId, 
                 ...userSnap.data(), 
-                relationId: relationDoc.id // Keep track of the link ID for deletion
+                relationId: relationDoc.id 
             };
         }
-        return null; // User might have been deleted manually
+        return null; 
     }));
     
-    return students.filter(s => s !== null);
+    // Filter nulls and Sort by Name Ascending
+    return students
+        .filter(s => s !== null)
+        .sort(naturalSort);
+        
   } catch (error) {
     console.error("Error fetching class students:", error);
     return [];
   }
 };
 
-// Add New Student to Class (Creates User + Creates Link)
+// Helper: Get all potential students for the dropdown
+export const getAllStudentCandidates = async () => {
+    const allUsers = await getAllUsers();
+    // Filter only those with role 'Student'
+    return allUsers.filter(u => u.role === 'Student').sort(naturalSort);
+};
+
+// OPTION A: Add NEW Student (Create User + Link)
 export const addStudentToClass = async (classId, studentData) => {
   try {
-    // 1. Create the User account (Role is 'Student')
     const result = await handleRegisterLogic(
         studentData.name, 
         studentData.username, 
@@ -210,7 +225,7 @@ export const addStudentToClass = async (classId, studentData) => {
     
     const newUserId = result.id;
     
-    // 2. Link User to Class in subcollection
+    // Link User to Class
     const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
     await addDoc(studentsRef, { 
         userId: newUserId, 
@@ -223,21 +238,41 @@ export const addStudentToClass = async (classId, studentData) => {
   }
 };
 
-// Update Student (Wraps user update)
+// OPTION B: Add EXISTING Student (Link Only)
+export const addExistingStudentToClass = async (classId, userId) => {
+    try {
+        const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
+        
+        // Check duplication (optional but recommended)
+        const q = query(studentsRef, where("userId", "==", userId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            return { success: false, message: "Student already in this class" };
+        }
+
+        await addDoc(studentsRef, { 
+            userId: userId, 
+            joinedAt: serverTimestamp() 
+        });
+        
+        return { success: true };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+// Update Student info
 export const updateStudentInClass = async (userId, data) => {
     return await updateUser(userId, data);
 };
 
-// Delete Student from Class (Removes Link + Deletes User Account)
+// Delete Student from Class (ONLY REMOVES LINK, KEEPS USER ACCOUNT)
 export const deleteStudentFromClass = async (classId, userId, relationId) => {
   try {
-    // 1. Delete the link in class
     if (relationId) {
          await deleteDoc(doc(db, "cqa02", "app_data", "classes", classId, "students", relationId));
     }
-    
-    // 2. Delete the User account
-    await deleteUser(userId);
+    // CHANGED: We DO NOT delete the user account anymore.
     
     return { success: true };
   } catch (error) {
