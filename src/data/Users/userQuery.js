@@ -5,7 +5,10 @@ import {
   where, 
   getDocs, 
   addDoc,
-  serverTimestamp 
+  serverTimestamp,
+  doc,          // Import doc
+  updateDoc,    // Import updateDoc
+  deleteDoc     // Import deleteDoc
 } from "firebase/firestore";
 
 // Define the Firestore path: cqa02 -> app_data -> users
@@ -48,7 +51,7 @@ export const handleLoginLogic = async (username, password) => {
   }
 };
 
-// --- Main Feature: Register Logic ---
+// --- Main Feature: Register/Add Logic ---
 export const handleRegisterLogic = async (name, username, password, role) => {
   if (!name || !username || !password || !role) {
     return { success: false, message: "All fields are required." };
@@ -73,5 +76,43 @@ export const handleRegisterLogic = async (name, username, password, role) => {
   } catch (error) {
     console.error("Register Error:", error);
     return { success: false, message: "Registration failed. Try again." };
+  }
+};
+
+// --- Admin Feature: Get All Users ---
+export const getAllUsers = async () => {
+  try {
+    const querySnapshot = await getDocs(USERS_COLLECTION_REF);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return [];
+  }
+};
+
+// --- Admin Feature: Update User ---
+export const updateUser = async (id, updatedData) => {
+  try {
+    const userDocRef = doc(db, "cqa02", "app_data", "users", id);
+    await updateDoc(userDocRef, updatedData);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return { success: false, message: "Update failed." };
+  }
+};
+
+// --- Admin Feature: Delete User ---
+export const deleteUser = async (id) => {
+  try {
+    const userDocRef = doc(db, "cqa02", "app_data", "users", id);
+    await deleteDoc(userDocRef);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return { success: false, message: "Delete failed." };
   }
 };
