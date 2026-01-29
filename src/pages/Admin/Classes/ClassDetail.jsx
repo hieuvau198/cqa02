@@ -31,7 +31,7 @@ export default function ClassDetail() {
   const items = [
     {
       key: 'members',
-      label: 'Class Members',
+      label: 'Danh sách',
       children: <ClassMembers classId={classId} />,
     },
     {
@@ -52,7 +52,7 @@ export default function ClassDetail() {
     <div>
       <Card>
         <div style={{ marginBottom: 24 }}>
-          <Title level={2}>{classInfo ? `Class: ${classInfo.name}` : 'Unknown Class'}</Title>
+          <Title level={2}>{classInfo ? `${classInfo.name}` : 'Unknown Class'}</Title>
           
         </div>
 

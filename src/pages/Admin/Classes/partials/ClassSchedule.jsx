@@ -5,10 +5,11 @@ import {
   Radio, message, Popconfirm, Tag, Space, List, Typography 
 } from 'antd';
 import { 
-  PlusOutlined, EditOutlined, DeleteOutlined, CheckSquareOutlined, ClockCircleOutlined 
+  PlusOutlined, EditOutlined, DeleteOutlined, CheckSquareOutlined, ClockCircleOutlined, TableOutlined 
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as ClassQuery from '../../../../data/Center/classQuery'; 
+import ClassAttendanceMatrix from './ClassAttendanceMatrix'; //
 
 const { TextArea } = Input;
 
@@ -24,6 +25,9 @@ export default function ClassSchedule({ classId }) {
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [currentAttendanceSlot, setCurrentAttendanceSlot] = useState(null);
   const [attendanceData, setAttendanceData] = useState({}); 
+
+  // --- Matrix Modal State ---
+  const [isMatrixOpen, setIsMatrixOpen] = useState(false);
 
   const [form] = Form.useForm();
 
@@ -220,7 +224,10 @@ export default function ClassSchedule({ classId }) {
 
   return (
     <div style={{ padding: '20px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16, gap: '10px' }}>
+        <Button icon={<TableOutlined />} onClick={() => setIsMatrixOpen(true)}>
+          View Details
+        </Button>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenSlotModal(null)}>
           Thêm buổi
         </Button>
@@ -232,6 +239,14 @@ export default function ClassSchedule({ classId }) {
         rowKey="id" 
         loading={loading}
         pagination={{ pageSize: 5 }}
+      />
+
+      {/* MATRIX MODAL */}
+      <ClassAttendanceMatrix 
+        isOpen={isMatrixOpen}
+        onClose={() => setIsMatrixOpen(false)}
+        slots={slots}
+        students={students}
       />
 
       {/* CREATE / EDIT SLOT MODAL */}

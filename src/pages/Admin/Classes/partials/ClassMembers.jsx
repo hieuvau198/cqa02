@@ -110,7 +110,7 @@ export default function ClassMembers({ classId }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showDrawer(null)}>
-          Add Student
+          Thêm học sinh
         </Button>
       </div>
 
