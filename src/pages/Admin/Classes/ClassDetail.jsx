@@ -36,12 +36,12 @@ export default function ClassDetail() {
     },
     {
       key: 'schedule',
-      label: 'Schedule',
+      label: 'Lịch học',
       children: <ClassSchedule classId={classId} />,
     },
     {
       key: 'payment',
-      label: 'Payment',
+      label: 'Học phí',
       children: <ClassPayment classId={classId} />,
     },
   ];
@@ -53,9 +53,7 @@ export default function ClassDetail() {
       <Card>
         <div style={{ marginBottom: 24 }}>
           <Title level={2}>{classInfo ? `Class: ${classInfo.name}` : 'Unknown Class'}</Title>
-          <Typography.Text type="secondary">
-             Manage details, schedule, and payments.
-          </Typography.Text>
+          
         </div>
 
         <Tabs defaultActiveKey="members" items={items} />

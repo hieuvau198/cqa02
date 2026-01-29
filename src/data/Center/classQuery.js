@@ -18,8 +18,9 @@ import { handleRegisterLogic, updateUser, deleteUser, getAllUsers } from "../Use
 const YEARS_REF = collection(db, "cqa02", "app_data", "years");
 const TERMS_REF = collection(db, "cqa02", "app_data", "terms");
 const CLASSES_REF = collection(db, "cqa02", "app_data", "classes");
+const SLOTS_REF = collection(db, "cqa02", "app_data", "slots");
 
-// Helper for Natural Sort (e.g. handles "Term 1", "Term 2", "Term 10" correctly)
+// Helper for Natural Sort
 const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
 // ==============================
@@ -29,7 +30,6 @@ const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric:
 export const getAllYears = async () => {
   try {
     const snapshot = await getDocs(YEARS_REF);
-    // Sort descending (2025, 2024...)
     return snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
@@ -67,14 +67,13 @@ export const deleteYear = async (id) => {
 };
 
 // ==============================
-// 2. TERMS CRUD (Linked to Year)
+// 2. TERMS CRUD
 // ==============================
 
 export const getTermsByYear = async (yearId) => {
   try {
     const q = query(TERMS_REF, where("yearId", "==", yearId));
     const snapshot = await getDocs(q);
-    // Sort ascending (Thang 1, Thang 2...)
     return snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .sort(naturalSort);
@@ -112,14 +111,13 @@ export const deleteTerm = async (id) => {
 };
 
 // ==============================
-// 3. CLASSES CRUD (Linked to Term)
+// 3. CLASSES CRUD
 // ==============================
 
 export const getClassesByTerm = async (termId) => {
   try {
     const q = query(CLASSES_REF, where("termId", "==", termId));
     const snapshot = await getDocs(q);
-    // Sort ascending (Class 1, Class 2...)
     return snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .sort(naturalSort);
@@ -160,7 +158,6 @@ export const deleteClass = async (id) => {
 // 4. STUDENT IN CLASS LOGIC
 // ==============================
 
-// Get Class Details
 export const getClassById = async (id) => {
   try {
     const docRef = doc(CLASSES_REF, id);
@@ -173,7 +170,6 @@ export const getClassById = async (id) => {
   }
 };
 
-// Get All Students in a Class
 export const getStudentsInClass = async (classId) => {
   try {
     const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
@@ -193,25 +189,18 @@ export const getStudentsInClass = async (classId) => {
         return null; 
     }));
     
-    // Filter nulls and Sort by Name Ascending
-    return students
-        .filter(s => s !== null)
-        .sort(naturalSort);
-        
+    return students.filter(s => s !== null).sort(naturalSort);
   } catch (error) {
     console.error("Error fetching class students:", error);
     return [];
   }
 };
 
-// Helper: Get all potential students for the dropdown
 export const getAllStudentCandidates = async () => {
     const allUsers = await getAllUsers();
-    // Filter only those with role 'Student'
     return allUsers.filter(u => u.role === 'Student').sort(naturalSort);
 };
 
-// OPTION A: Add NEW Student (Create User + Link)
 export const addStudentToClass = async (classId, studentData) => {
   try {
     const result = await handleRegisterLogic(
@@ -220,60 +209,96 @@ export const addStudentToClass = async (classId, studentData) => {
         studentData.password, 
         'Student'
     );
-    
     if (!result.success) return result;
-    
     const newUserId = result.id;
-    
-    // Link User to Class
     const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
-    await addDoc(studentsRef, { 
-        userId: newUserId, 
-        joinedAt: serverTimestamp() 
-    });
-    
+    await addDoc(studentsRef, { userId: newUserId, joinedAt: serverTimestamp() });
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
   }
 };
 
-// OPTION B: Add EXISTING Student (Link Only)
 export const addExistingStudentToClass = async (classId, userId) => {
     try {
         const studentsRef = collection(db, "cqa02", "app_data", "classes", classId, "students");
-        
-        // Check duplication (optional but recommended)
         const q = query(studentsRef, where("userId", "==", userId));
         const snap = await getDocs(q);
-        if (!snap.empty) {
-            return { success: false, message: "Student already in this class" };
-        }
-
-        await addDoc(studentsRef, { 
-            userId: userId, 
-            joinedAt: serverTimestamp() 
-        });
-        
+        if (!snap.empty) return { success: false, message: "Student already in this class" };
+        await addDoc(studentsRef, { userId: userId, joinedAt: serverTimestamp() });
         return { success: true };
     } catch (error) {
         return { success: false, message: error.message };
     }
 }
 
-// Update Student info
 export const updateStudentInClass = async (userId, data) => {
     return await updateUser(userId, data);
 };
 
-// Delete Student from Class (ONLY REMOVES LINK, KEEPS USER ACCOUNT)
 export const deleteStudentFromClass = async (classId, userId, relationId) => {
   try {
     if (relationId) {
          await deleteDoc(doc(db, "cqa02", "app_data", "classes", classId, "students", relationId));
     }
-    // CHANGED: We DO NOT delete the user account anymore.
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// ==============================
+// 5. SCHEDULE / SLOTS CRUD
+// ==============================
+
+// Fetch all slots for a specific class
+export const getSlotsByClass = async (classId) => {
+  try {
+    const q = query(SLOTS_REF, where("classId", "==", classId));
+    const snapshot = await getDocs(q);
     
+    // Sort by Date Descending, then by Start Time Descending
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => {
+          const dateDiff = b.date.localeCompare(a.date);
+          if (dateDiff !== 0) return dateDiff;
+          
+          // If dates are equal, sort by start time (if exists)
+          const timeA = a.startTime || "";
+          const timeB = b.startTime || "";
+          return timeB.localeCompare(timeA);
+      }); 
+  } catch (error) {
+    console.error("Error fetching slots:", error);
+    return [];
+  }
+};
+
+// Add a new slot
+export const addSlot = async (data) => {
+  try {
+    await addDoc(SLOTS_REF, { ...data, createdAt: serverTimestamp() });
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Update a slot
+export const updateSlot = async (id, data) => {
+  try {
+    await updateDoc(doc(SLOTS_REF, id), data);
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Delete a slot
+export const deleteSlot = async (id) => {
+  try {
+    await deleteDoc(doc(SLOTS_REF, id));
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
