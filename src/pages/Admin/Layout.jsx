@@ -36,7 +36,7 @@ const AdminLayout = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsable collapsed={collapsed}>
         <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: 'white', lineHeight: '32px' }}>
-          {collapsed ? 'A' : 'Admin Panel'}
+          {collapsed ? 'A' : 'Trang Quản Trị Viên'}
         </div>
         <Menu
           theme="dark"
@@ -47,17 +47,17 @@ const AdminLayout = () => {
             {
               key: '/admin/dashboard',
               icon: <DashboardOutlined />,
-              label: 'Dashboard',
+              label: 'Tổng quan',
             },
             {
               key: '/admin/users',
               icon: <UserOutlined />,
-              label: 'Users',
+              label: 'Tài khoản',
             },
             {
                 key: '/admin/classes', // <-- Add this item
                 icon: <ReadOutlined />,
-                label: 'Classes',
+                label: 'Lớp học',
             },
             {
               key: 'logout',
