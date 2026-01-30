@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Table, Button, Modal, Form, DatePicker, TimePicker, Input, 
-  Radio, message, Popconfirm, Tag, Space, List, Typography 
+  Radio, message, Popconfirm, Tag, Space, List, Typography, Grid 
 } from 'antd';
 import { 
   PlusOutlined, EditOutlined, DeleteOutlined, CheckSquareOutlined, ClockCircleOutlined, TableOutlined 
@@ -12,6 +12,7 @@ import * as ClassQuery from '../../../../data/Center/classQuery';
 import ClassAttendanceMatrix from './ClassAttendanceMatrix'; //
 
 const { TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 export default function ClassSchedule({ classId }) {
   const [slots, setSlots] = useState([]);
@@ -30,6 +31,7 @@ export default function ClassSchedule({ classId }) {
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
 
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
 
   // --- 1. Initial Data Fetching ---
   const fetchData = async () => {
@@ -239,6 +241,7 @@ export default function ClassSchedule({ classId }) {
         rowKey="id" 
         loading={loading}
         pagination={{ pageSize: 5 }}
+        scroll={{ x: 700 }}
       />
 
       {/* MATRIX MODAL */}
@@ -255,6 +258,8 @@ export default function ClassSchedule({ classId }) {
         open={isSlotModalOpen}
         onCancel={() => setIsSlotModalOpen(false)}
         onOk={() => form.submit()}
+        // UPDATE: Responsive width
+        width={screens.xs ? '100%' : 520}
       >
         <Form form={form} layout="vertical" onFinish={handleSaveSlot}>
             <Form.Item name="date" label="Date" rules={[{ required: true }]}>
@@ -280,15 +285,12 @@ export default function ClassSchedule({ classId }) {
 
       {/* ATTENDANCE MODAL */}
       <Modal
-        title={
-            <span>
-                Attendance for: <b>{currentAttendanceSlot ? dayjs(currentAttendanceSlot.date).format('DD/MM/YYYY') : ''}</b>
-            </span>
-        }
+        // ... title prop ...
         open={isAttendanceModalOpen}
         onCancel={() => setIsAttendanceModalOpen(false)}
         onOk={handleSaveAttendance}
-        width={600}
+        // UPDATE: Responsive width
+        width={screens.xs ? '100%' : 600}
       >
         {students.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#999' }}>No students in this class.</div>

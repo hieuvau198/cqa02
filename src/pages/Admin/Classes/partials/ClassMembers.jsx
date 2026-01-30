@@ -1,10 +1,11 @@
 // src/pages/Admin/Classes/partials/ClassMembers.jsx
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Button, Space, Drawer, Form, Input, message, Popconfirm, Radio, Select, Tag, Divider, Row, Col } from 'antd';
+import { Table, Button, Space, Drawer, Form, Input, message, Popconfirm, Radio, Select, Tag, Divider, Row, Col, Grid } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, PhoneOutlined, HomeOutlined, BankOutlined } from '@ant-design/icons';
-import * as ClassMember from '../../../../data/Center/classMember'; // New Import
+import * as ClassMember from '../../../../data/Center/classMember';
 
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 export default function ClassMembers({ classId }) {
   const [students, setStudents] = useState([]);
@@ -16,6 +17,7 @@ export default function ClassMembers({ classId }) {
   const [editingStudent, setEditingStudent] = useState(null);
   const [addMode, setAddMode] = useState('new'); 
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -158,17 +160,20 @@ export default function ClassMembers({ classId }) {
         </Button>
       </div>
 
+      {/* UPDATE: Add scroll prop for mobile table scrolling */}
       <Table 
         columns={columns} 
         dataSource={students} 
         rowKey="id" 
         loading={loading} 
         pagination={{ pageSize: 10 }}
+        scroll={{ x: 800 }} 
       />
 
       <Drawer
         title={editingStudent ? "Cập nhật thông tin" : "Thêm học sinh mới"}
-        width={480}
+        // UPDATE: Responsive width (100% on mobile, 480px on desktop)
+        width={screens.xs ? '100%' : 480}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >

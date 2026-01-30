@@ -1,12 +1,13 @@
 // src/pages/Admin/Classes/partials/ClassPayment.jsx
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Drawer, Form, InputNumber, Select, message, Popconfirm, Tag, Input } from 'antd';
+import { Table, Button, Space, Drawer, Form, InputNumber, Select, message, Popconfirm, Tag, Input, Grid } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import * as ClassQuery from '../../../../data/Center/classQuery';
 import * as PaymentQuery from '../../../../data/Center/paymentQuery'; 
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 export default function ClassPayment({ classId }) {
   const [payments, setPayments] = useState([]);
@@ -17,6 +18,7 @@ export default function ClassPayment({ classId }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
 
   // Status Constants
   const STATUS_OPTIONS = [
@@ -181,11 +183,13 @@ export default function ClassPayment({ classId }) {
         loading={loading} 
         pagination={{ pageSize: 10 }}
         locale={{ emptyText: 'Chưa có dữ liệu học phí' }}
+        scroll={{ x: 800 }}
       />
 
       <Drawer
         title={editingPayment ? "Sửa khoản thu" : "Tạo khoản thu mới"}
-        width={450}
+        // UPDATE: Responsive width
+        width={screens.xs ? '100%' : 450}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >

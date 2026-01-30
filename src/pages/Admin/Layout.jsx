@@ -34,9 +34,14 @@ const AdminLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsable collapsed={collapsed}>
+      <Sider 
+        trigger={null} 
+        collapsable 
+        collapsed={collapsed} 
+        collapsedWidth="0"
+      >
         <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: 'white', lineHeight: '32px' }}>
-          {collapsed ? 'A' : 'Trang Quản Trị Viên'}
+          {collapsed ? '' : 'Trang Quản Trị Viên'} 
         </div>
         <Menu
           theme="dark"
