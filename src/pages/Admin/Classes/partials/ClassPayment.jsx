@@ -4,6 +4,7 @@ import { Table, Button, Space, Drawer, Form, InputNumber, Select, message, Popco
 import { PlusOutlined, EditOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import * as ClassQuery from '../../../../data/Center/classQuery';
 import * as PaymentQuery from '../../../../data/Center/paymentQuery'; 
+import * as ClassMember from '../../../../data/Center/classMember'; // <--- ADD THIS IMPORT
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -14,7 +15,7 @@ export default function ClassPayment({ classId }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Drawer State
+  // ... (keep existing state definitions) ...
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [form] = Form.useForm();
@@ -31,9 +32,10 @@ export default function ClassPayment({ classId }) {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // FIX: Use ClassMember.getClassMembers instead of ClassQuery.getStudentsInClass
       const [fetchedPayments, fetchedStudents] = await Promise.all([
         PaymentQuery.getPaymentsByClass(classId),
-        ClassQuery.getStudentsInClass(classId)
+        ClassMember.getClassMembers(classId)
       ]);
       setPayments(fetchedPayments);
       setStudents(fetchedStudents);

@@ -9,7 +9,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as ClassQuery from '../../../../data/Center/classQuery'; 
-import ClassAttendanceMatrix from './ClassAttendanceMatrix'; //
+import * as ClassMember from '../../../../data/Center/classMember'; // <--- ADD THIS IMPORT
+import ClassAttendanceMatrix from './ClassAttendanceMatrix'; 
 
 const { TextArea } = Input;
 const { useBreakpoint } = Grid;
@@ -19,7 +20,7 @@ export default function ClassSchedule({ classId }) {
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]); 
 
-  // --- Modal States ---
+  // ... (keep existing state definitions) ...
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState(null);
   
@@ -27,7 +28,6 @@ export default function ClassSchedule({ classId }) {
   const [currentAttendanceSlot, setCurrentAttendanceSlot] = useState(null);
   const [attendanceData, setAttendanceData] = useState({}); 
 
-  // --- Matrix Modal State ---
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
 
   const [form] = Form.useForm();
@@ -36,12 +36,18 @@ export default function ClassSchedule({ classId }) {
   // --- 1. Initial Data Fetching ---
   const fetchData = async () => {
     setLoading(true);
-    const [fetchedSlots, fetchedStudents] = await Promise.all([
-        ClassQuery.getSlotsByClass(classId),
-        ClassQuery.getStudentsInClass(classId)
-    ]);
-    setSlots(fetchedSlots);
-    setStudents(fetchedStudents);
+    try {
+      // FIX: Use ClassMember.getClassMembers instead of ClassQuery.getStudentsInClass
+      const [fetchedSlots, fetchedStudents] = await Promise.all([
+          ClassQuery.getSlotsByClass(classId),
+          ClassMember.getClassMembers(classId) 
+      ]);
+      setSlots(fetchedSlots);
+      setStudents(fetchedStudents);
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to load schedule data");
+    }
     setLoading(false);
   };
 

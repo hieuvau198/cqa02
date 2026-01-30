@@ -173,7 +173,7 @@ export default function ClassMembers({ classId }) {
       <Drawer
         title={editingStudent ? "Cập nhật thông tin" : "Thêm học sinh mới"}
         // UPDATE: Responsive width (100% on mobile, 480px on desktop)
-        width={screens.xs ? '100%' : 480}
+        size={screens.xs ? '100%' : 480}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
