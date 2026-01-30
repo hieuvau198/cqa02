@@ -64,19 +64,26 @@ const AdminUsers = () => {
     setLoading(true);
     let result;
 
+    // Ensure grade is empty string if undefined
+    const userData = {
+      ...values,
+      grade: values.grade || '' 
+    };
+
     if (editingUser) {
       // Edit Mode
-      result = await updateUser(editingUser.id, values);
+      result = await updateUser(editingUser.id, userData);
       if (result.success) {
         message.success('User updated successfully');
       }
     } else {
       // Add Mode
       result = await handleRegisterLogic(
-        values.name, 
-        values.username, 
-        values.password, 
-        values.role
+        userData.name, 
+        userData.username, 
+        userData.password, 
+        userData.role,
+        userData.grade // Pass grade here
       );
       if (result.success) {
         message.success('User added successfully');
@@ -102,6 +109,9 @@ const AdminUsers = () => {
     }
   };
 
+  // --- Helper for Grade Options ---
+  const gradeOptions = Array.from({ length: 12 }, (_, i) => `Lớp ${i + 1}`);
+
   // --- Table Columns ---
   const columns = [
     {
@@ -126,22 +136,28 @@ const AdminUsers = () => {
       },
     },
     {
+      title: 'Grade',
+      dataIndex: 'grade',
+      key: 'grade',
+      render: (text) => text || '-',
+    },
+    {
       title: 'Actions',
       key: 'action',
-      render: (_,kz) => (
+      render: (_, record) => (
         <Space size="middle">
           <Button 
             type="primary" 
             ghost 
             icon={<EditOutlined />} 
-            onClick={() => showDrawer(kz)}
+            onClick={() => showDrawer(record)}
           >
             Edit
           </Button>
           <Popconfirm
             title="Delete the user"
             description="Are you sure to delete this user?"
-            onConfirm={() => handleDelete(kz.id)}
+            onConfirm={() => handleDelete(record.id)}
             okText="Yes"
             cancelText="No"
           >
@@ -172,7 +188,7 @@ const AdminUsers = () => {
       <Drawer
         title={editingUser ? "Edit User" : "Add New User"}
         width={400}
-        onCXlose={closeDrawer}
+        onClose={closeDrawer}
         open={drawerVisible}
         styles={{ body: { paddingBottom: 80 } }}
       >
@@ -211,6 +227,18 @@ const AdminUsers = () => {
               <Option value="Teacher">Teacher</Option>
               <Option value="Staff">Staff</Option>
               <Option value="Admin">Admin</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="grade"
+            label="Grade (Optional - Mostly for Students)"
+          >
+            <Select placeholder="Select a grade" allowClear>
+              {gradeOptions.map(g => (
+                <Option key={g} value={g}>{g}</Option>
+              ))}
+              <Option value="Khác">Khác</Option>
             </Select>
           </Form.Item>
 

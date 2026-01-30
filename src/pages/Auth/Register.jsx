@@ -19,7 +19,8 @@ export default function Register() {
       values.name,
       values.username,
       values.password,
-      values.role
+      values.role,
+      values.grade // Pass grade to register logic
     );
 
     if (result.success) {
@@ -30,6 +31,8 @@ export default function Register() {
     }
     setLoading(false);
   };
+
+  const gradeOptions = Array.from({ length: 12 }, (_, i) => `Lớp ${i + 1}`);
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
@@ -81,6 +84,19 @@ export default function Register() {
               <Option value="Teacher">Teacher</Option>
               <Option value="Staff">Staff</Option>
               <Option value="Admin">Admin</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="grade"
+            label="Grade"
+            extra="Required for students"
+          >
+            <Select placeholder="Select your grade" allowClear>
+              {gradeOptions.map(g => (
+                <Option key={g} value={g}>{g}</Option>
+              ))}
+              <Option value="Khác">Khác</Option>
             </Select>
           </Form.Item>
 

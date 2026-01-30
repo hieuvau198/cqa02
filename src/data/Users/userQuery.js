@@ -6,9 +6,9 @@ import {
   getDocs, 
   addDoc,
   serverTimestamp,
-  doc,          // Import doc
-  updateDoc,    // Import updateDoc
-  deleteDoc     // Import deleteDoc
+  doc,          
+  updateDoc,    
+  deleteDoc     
 } from "firebase/firestore";
 
 // Define the Firestore path: cqa02 -> app_data -> users
@@ -52,7 +52,8 @@ export const handleLoginLogic = async (username, password) => {
 };
 
 // --- Main Feature: Register/Add Logic ---
-export const handleRegisterLogic = async (name, username, password, role) => {
+// UPDATED: Added 'grade' parameter
+export const handleRegisterLogic = async (name, username, password, role, grade = '') => {
   if (!name || !username || !password || !role) {
     return { success: false, message: "All fields are required." };
   }
@@ -68,10 +69,10 @@ export const handleRegisterLogic = async (name, username, password, role) => {
       username,
       password, // Stored as plain text per request
       role,
+      grade,    // Store the grade
       createdAt: serverTimestamp()
     };
 
-    // CHANGE: Capture the reference to get the ID
     const docRef = await addDoc(USERS_COLLECTION_REF, newUser);
     return { success: true, id: docRef.id }; 
   } catch (error) {
