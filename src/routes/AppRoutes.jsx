@@ -7,6 +7,7 @@ import ProtectedRoute from './ProtectedRoute';
 import AdminUsers from '../pages/Admin/Users/AdminUsers';
 import AdminClasses from '../pages/Admin/Classes/AdminClasses';
 import ClassDetail from '../pages/Admin/Classes/ClassDetail';
+import AdminCurriculum from '../pages/Admin/Curriculum/AdminCurriculum';
 
 // Temporary placeholder for other roles
 const RoleDashboard = ({ role }) => (
@@ -33,6 +34,7 @@ const AppRoutes = () => {
           <Route path="users" element={<AdminUsers />} />
           <Route path="classes" element={<AdminClasses />} /> 
           <Route path="classes/:id" element={<ClassDetail />} />
+          <Route path="curriculum" element={<AdminCurriculum />} />
         </Route>
       </Route>
 
