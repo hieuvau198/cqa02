@@ -2,14 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Table, Button, Modal, Form, DatePicker, TimePicker, Input, 
-  Radio, message, Popconfirm, Tag, Space, List, Typography, Grid 
+  Radio, message, Popconfirm, Tag, Space, List, Typography, Grid, Empty
 } from 'antd';
 import { 
-  PlusOutlined, EditOutlined, DeleteOutlined, CheckSquareOutlined, ClockCircleOutlined, TableOutlined 
+  PlusOutlined, EditOutlined, DeleteOutlined, CheckSquareOutlined, ClockCircleOutlined, TableOutlined, LinkOutlined, AppstoreOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as ClassQuery from '../../../../data/Center/classQuery'; 
-import * as ClassMember from '../../../../data/Center/classMember'; // <--- ADD THIS IMPORT
+import * as ClassMember from '../../../../data/Center/classMember'; 
 import ClassAttendanceMatrix from './ClassAttendanceMatrix'; 
 
 const { TextArea } = Input;
@@ -20,30 +20,41 @@ export default function ClassSchedule({ classId }) {
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]); 
 
-  // ... (keep existing state definitions) ...
+  // --- Slot State ---
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState(null);
   
+  // --- Attendance State ---
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [currentAttendanceSlot, setCurrentAttendanceSlot] = useState(null);
   const [attendanceData, setAttendanceData] = useState({}); 
 
+  // --- Matrix State ---
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
 
+  // --- Activity State (NEW) ---
+  const [slotActivities, setSlotActivities] = useState({}); // Map: slotId -> [activities]
+  const [loadingActivities, setLoadingActivities] = useState({}); // Map: slotId -> boolean
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState(null);
+  const [currentSlotForActivity, setCurrentSlotForActivity] = useState(null);
+
   const [form] = Form.useForm();
+  const [activityForm] = Form.useForm();
   const screens = useBreakpoint();
 
   // --- 1. Initial Data Fetching ---
   const fetchData = async () => {
     setLoading(true);
     try {
-      // FIX: Use ClassMember.getClassMembers instead of ClassQuery.getStudentsInClass
       const [fetchedSlots, fetchedStudents] = await Promise.all([
           ClassQuery.getSlotsByClass(classId),
           ClassMember.getClassMembers(classId) 
       ]);
       setSlots(fetchedSlots);
       setStudents(fetchedStudents);
+      // Clear activity cache on full refresh to ensure data consistency
+      setSlotActivities({});
     } catch (error) {
       console.error(error);
       message.error("Failed to load schedule data");
@@ -156,7 +167,153 @@ export default function ClassSchedule({ classId }) {
     }
   };
 
-  // --- 4. Columns & Render ---
+  // --- 4. Activity Logic (NEW) ---
+
+  const fetchActivities = async (slotId) => {
+    setLoadingActivities(prev => ({ ...prev, [slotId]: true }));
+    const acts = await ClassQuery.getActivitiesBySlot(slotId);
+    setSlotActivities(prev => ({ ...prev, [slotId]: acts }));
+    setLoadingActivities(prev => ({ ...prev, [slotId]: false }));
+  };
+
+  const handleOpenActivityModal = (slot, activity = null) => {
+    setCurrentSlotForActivity(slot);
+    setEditingActivity(activity);
+    if (activity) {
+      activityForm.setFieldsValue({
+        name: activity.name,
+        description: activity.description,
+        link: activity.link
+      });
+    } else {
+      activityForm.resetFields();
+    }
+    setIsActivityModalOpen(true);
+  };
+
+  const handleSaveActivity = async (values) => {
+    if (!currentSlotForActivity) return;
+
+    const payload = {
+      slotId: currentSlotForActivity.id,
+      name: values.name,
+      description: values.description || '',
+      link: values.link || ''
+    };
+
+    let result;
+    if (editingActivity) {
+      result = await ClassQuery.updateActivity(editingActivity.id, payload);
+    } else {
+      result = await ClassQuery.addActivity(payload);
+    }
+
+    if (result.success) {
+      message.success(editingActivity ? "Activity updated" : "Activity added");
+      setIsActivityModalOpen(false);
+      // Refresh activities for this slot
+      fetchActivities(currentSlotForActivity.id);
+    } else {
+      message.error(result.message);
+    }
+  };
+
+  const handleDeleteActivity = async (activityId, slotId) => {
+    const result = await ClassQuery.deleteActivity(activityId);
+    if (result.success) {
+      message.success("Activity deleted");
+      fetchActivities(slotId);
+    } else {
+      message.error(result.message);
+    }
+  };
+
+  // --- 5. Renderers ---
+
+  // Sub-table for Activities
+  const activityColumns = [
+    { title: 'Activity Name', dataIndex: 'name', key: 'name', width: '25%' },
+    { title: 'Description', dataIndex: 'description', key: 'description' },
+    { 
+      title: 'Link', 
+      key: 'link', 
+      width: '20%',
+      render: (_, r) => r.link ? <a href={r.link} target="_blank" rel="noreferrer"><LinkOutlined /> {r.link}</a> : '-'
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      width: 100,
+      render: (_, r) => (
+        <Space>
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => handleOpenActivityModal(currentSlotForActivity, r)} // Note: logic handled by parent scope usually, but here we need slot info. 
+            // Wait, inside expandedRowRender we might not have 'currentSlotForActivity' in state if we just clicked expand.
+            // Better to pass slot explicitly.
+          />
+          <Popconfirm title="Delete activity?" onConfirm={() => handleDeleteActivity(r.id, r.slotId)}>
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
+
+  const expandedRowRender = (slot) => {
+    const acts = slotActivities[slot.id] || [];
+    const isLoading = loadingActivities[slot.id];
+
+    return (
+      <div style={{ padding: '10px 20px', background: '#fafafa', borderRadius: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong><AppstoreOutlined /> Activities</Typography.Text>
+            <Button 
+                size="small" 
+                type="dashed" 
+                icon={<PlusOutlined />} 
+                onClick={() => handleOpenActivityModal(slot)}
+            >
+                Add Activity
+            </Button>
+        </div>
+        <Table 
+            columns={[
+                { title: 'Name', dataIndex: 'name', key: 'name', width: '20%' },
+                { title: 'Description', dataIndex: 'description', key: 'description' },
+                { 
+                    title: 'Link', 
+                    key: 'link', 
+                    render: (_, r) => r.link ? <a href={r.link} target="_blank" rel="noreferrer"><LinkOutlined /> Source</a> : null 
+                },
+                {
+                    title: '',
+                    key: 'action',
+                    width: 80,
+                    render: (_, r) => (
+                        <Space size="small">
+                            <Button 
+                                size="small" 
+                                icon={<EditOutlined />} 
+                                onClick={() => handleOpenActivityModal(slot, r)} 
+                            />
+                            <Popconfirm title="Delete?" onConfirm={() => handleDeleteActivity(r.id, slot.id)}>
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                        </Space>
+                    )
+                }
+            ]}
+            dataSource={acts}
+            rowKey="id"
+            pagination={false}
+            loading={isLoading}
+            locale={{ emptyText: <Empty description="No activities found" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+        />
+      </div>
+    );
+  };
 
   const columns = [
     {
@@ -246,8 +403,16 @@ export default function ClassSchedule({ classId }) {
         dataSource={slots} 
         rowKey="id" 
         loading={loading}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 10 }} // Increased page size for better view
         scroll={{ x: 700 }}
+        expandable={{
+            expandedRowRender: expandedRowRender,
+            onExpand: (expanded, record) => {
+                if (expanded && !slotActivities[record.id]) {
+                    fetchActivities(record.id);
+                }
+            }
+        }}
       />
 
       {/* MATRIX MODAL */}
@@ -264,7 +429,6 @@ export default function ClassSchedule({ classId }) {
         open={isSlotModalOpen}
         onCancel={() => setIsSlotModalOpen(false)}
         onOk={() => form.submit()}
-        // UPDATE: Responsive width
         width={screens.xs ? '100%' : 520}
       >
         <Form form={form} layout="vertical" onFinish={handleSaveSlot}>
@@ -289,13 +453,32 @@ export default function ClassSchedule({ classId }) {
         </Form>
       </Modal>
 
+      {/* ACTIVITY MODAL (NEW) */}
+      <Modal
+        title={editingActivity ? "Edit Activity" : "New Activity"}
+        open={isActivityModalOpen}
+        onCancel={() => setIsActivityModalOpen(false)}
+        onOk={() => activityForm.submit()}
+      >
+        <Form form={activityForm} layout="vertical" onFinish={handleSaveActivity}>
+            <Form.Item name="name" label="Activity Name" rules={[{ required: true, message: 'Please enter a name' }]}>
+                <Input placeholder="e.g. Quiz, Group Discussion" />
+            </Form.Item>
+            <Form.Item name="description" label="Description">
+                <TextArea rows={2} placeholder="Instructions or details..." />
+            </Form.Item>
+            <Form.Item name="link" label="Source / Link">
+                <Input prefix={<LinkOutlined />} placeholder="https://..." />
+            </Form.Item>
+        </Form>
+      </Modal>
+
       {/* ATTENDANCE MODAL */}
       <Modal
-        // ... title prop ...
+        title="Điểm danh"
         open={isAttendanceModalOpen}
         onCancel={() => setIsAttendanceModalOpen(false)}
         onOk={handleSaveAttendance}
-        // UPDATE: Responsive width
         width={screens.xs ? '100%' : 600}
       >
         {students.length === 0 ? (
