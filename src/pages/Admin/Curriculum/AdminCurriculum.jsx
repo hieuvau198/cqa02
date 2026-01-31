@@ -16,7 +16,7 @@ export default function AdminCurriculum() {
   const [subjects, setSubjects] = useState([]);
   
   const [selectedSection, setSelectedSection] = useState(null);
-  const [activityRefresh, setActivityRefresh] = useState(0); // Trigger to reload activities
+  const [activityRefresh, setActivityRefresh] = useState(0);
 
   const [filterGrade, setFilterGrade] = useState(null);
   const [filterSubject, setFilterSubject] = useState(null);
@@ -42,7 +42,14 @@ export default function AdminCurriculum() {
     setEditingItem(item);
     setIsModalOpen(true);
     if (item) {
-      form.setFieldsValue({ name: item.name, gradeId: item.gradeId, subjectId: item.subjectId });
+      // Updated to include description and url for activities
+      form.setFieldsValue({ 
+        name: item.name, 
+        gradeId: item.gradeId, 
+        subjectId: item.subjectId,
+        description: item.description,
+        url: item.url 
+      });
     } else {
       form.resetFields();
     }
@@ -54,7 +61,13 @@ export default function AdminCurriculum() {
       let res;
       
       if (modalType === 'activity') {
-        const data = { name: values.name, sectionId: selectedSection.id };
+        // Updated data object to include description and url
+        const data = { 
+          name: values.name, 
+          description: values.description || "", 
+          url: values.url || "", 
+          sectionId: selectedSection.id 
+        };
         res = editingItem 
           ? await ActivityQuery.updateActivity(editingItem.id, data)
           : await ActivityQuery.addActivity(data);
@@ -136,7 +149,12 @@ export default function AdminCurriculum() {
         </Col>
       </Row>
 
-      <Modal title={`${editingItem ? 'Sửa' : 'Thêm'} ${modalType}`} open={isModalOpen} onOk={handleSave} onCancel={() => setIsModalOpen(false)}>
+      <Modal 
+        title={`${editingItem ? 'Sửa' : 'Thêm'} ${modalType}`} 
+        open={isModalOpen} 
+        onOk={handleSave} 
+        onCancel={() => setIsModalOpen(false)}
+      >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="Tên" rules={[{ required: true }]}>
             <Input />
@@ -145,6 +163,17 @@ export default function AdminCurriculum() {
             <>
               <Form.Item name="gradeId" label="Khối" rules={[{ required: true }]}><Select>{grades.map(g => <Option key={g.id} value={g.id}>{g.name}</Option>)}</Select></Form.Item>
               <Form.Item name="subjectId" label="Môn" rules={[{ required: true }]}><Select>{subjects.map(s => <Option key={s.id} value={s.id}>{s.name}</Option>)}</Select></Form.Item>
+            </>
+          )}
+          {/* Added description and url fields for the activity form */}
+          {modalType === 'activity' && (
+            <>
+              <Form.Item name="description" label="Mô tả">
+                <Input.TextArea rows={3} placeholder="Nhập mô tả hoạt động..." />
+              </Form.Item>
+              <Form.Item name="url" label="Link nguồn (URL)">
+                <Input placeholder="https://example.com" />
+              </Form.Item>
             </>
           )}
         </Form>

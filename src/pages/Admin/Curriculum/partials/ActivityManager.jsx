@@ -1,7 +1,7 @@
 // src/pages/Admin/Curriculum/partials/ActivityManager.jsx
 import React, { useEffect, useState } from 'react';
 import { Card, List, Button, Popconfirm, Typography } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from '@ant-design/icons';
 import * as ActivityQuery from '../../../../data/Center/activityQuery';
 
 const { Text } = Typography;
@@ -11,7 +11,6 @@ export default function ActivityManager({ section, onOpenModal, refreshTrigger }
 
   const loadActivities = async () => {
     if (section?.id) {
-      // Assuming getActivitiesBySection is added to activityQuery.js
       const data = await ActivityQuery.getActivitiesBySection(section.id);
       setActivities(data);
     } else {
@@ -48,17 +47,37 @@ export default function ActivityManager({ section, onOpenModal, refreshTrigger }
       <List
         dataSource={activities}
         renderItem={item => (
-          <List.Item actions={[
-            <EditOutlined key="edit" onClick={() => onOpenModal('activity', item)} />,
-            <Popconfirm 
-              key="del" 
-              title="Xóa hoạt động này?" 
-              onConfirm={() => handleDelete(item.id)}
-            >
-              <DeleteOutlined style={{ color: 'red' }} />
-            </Popconfirm>
-          ]}>
-            <Text>{item.name}</Text>
+          <List.Item 
+            actions={[
+              <EditOutlined key="edit" onClick={() => onOpenModal('activity', item)} />,
+              <Popconfirm 
+                key="del" 
+                title="Xóa hoạt động này?" 
+                onConfirm={() => handleDelete(item.id)}
+              >
+                <DeleteOutlined style={{ color: 'red' }} />
+              </Popconfirm>
+            ]}
+          >
+            {/* Using Meta to show name, URL, and description */}
+            <List.Item.Meta
+              title={
+                <span>
+                  {item.name} 
+                  {item.url && (
+                    <a 
+                      href={item.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{ marginLeft: 8 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <LinkOutlined />
+                    </a>
+                  )}
+                </span>
+              }
+            />
           </List.Item>
         )}
         locale={{ emptyText: section ? 'Chưa có hoạt động' : 'Vui lòng chọn một section' }}
