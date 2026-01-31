@@ -27,6 +27,7 @@ export const getActivitiesBySlot = async (slotId) => {
 
 export const addActivity = async (data) => {
   try {
+    // data should now include { sectionId, name, ... }
     await addDoc(ACTIVITIES_REF, { ...data, createdAt: serverTimestamp() });
     return { success: true };
   } catch (error) {
@@ -49,5 +50,16 @@ export const deleteActivity = async (id) => {
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
+  }
+};
+
+export const getActivitiesBySection = async (sectionId) => {
+  try {
+    const q = query(ACTIVITIES_REF, where("sectionId", "==", sectionId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching activities:", error);
+    return [];
   }
 };
