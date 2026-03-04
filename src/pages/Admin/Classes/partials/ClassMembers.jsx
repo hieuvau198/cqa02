@@ -27,7 +27,6 @@ import {
   BankOutlined,
 } from "@ant-design/icons";
 import * as ClassMember from "../../../../data/Center/classMember";
-import { getGrades } from "../../../../data/Center/sectionQuery";
 
 const { Option } = Select;
 const { useBreakpoint } = Grid;
@@ -36,7 +35,6 @@ export default function ClassMembers({ classId }) {
   const [students, setStudents] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [grades, setGrades] = useState([]);
 
   // Drawer State
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -65,30 +63,20 @@ export default function ClassMembers({ classId }) {
     return candidates.filter((c) => !students.some((s) => s.id === c.id));
   }, [candidates, students]);
 
-  // Create a helper to fetch candidates and grades together
-const fetchCandidatesAndGrades = async () => {
-  const users = await ClassMember.getStudentCandidates();
-  setCandidates(users);
-  const fetchedGrades = await getGrades();
-  setGrades(fetchedGrades);
-};
 
-const showDrawer = async (student = null) => {
-  setEditingStudent(student);
-  setAddMode("existing");
+  const showDrawer = async (student = null) => {
+    setEditingStudent(student);
+    setAddMode("existing");
 
-  if (student) {
-    form.setFieldsValue(student);
-    // Fetch grades so the dropdown populates when editing
-    const fetchedGrades = await getExistingGrades();
-    setGrades(fetchedGrades);
-  } else {
-    form.resetFields();
-    form.setFieldsValue({ status: "Đang học" }); // Default
-    await fetchCandidatesAndGrades(); // <--- Call the new helper here
-  }
-  setDrawerVisible(true);
-};
+    if (student) {
+      form.setFieldsValue(student);
+    } else {
+      form.resetFields();
+      form.setFieldsValue({ status: "Đang học" }); // Default
+      await fetchCandidates(); 
+    }
+    setDrawerVisible(true);
+  };
 
   const handleSave = async (values) => {
     setLoading(true);
@@ -136,6 +124,9 @@ const showDrawer = async (student = null) => {
       message.error(result.message);
     }
   };
+
+  // --- Helper for Grade Options ---
+  const gradeOptions = Array.from({ length: 12 }, (_, i) => `Lớp ${i + 1}`);
 
   const columns = [
     {
@@ -234,7 +225,6 @@ const showDrawer = async (student = null) => {
         </Button>
       </div>
 
-      {/* UPDATE: Add scroll prop for mobile table scrolling */}
       <Table
         columns={columns}
         dataSource={students}
@@ -246,7 +236,6 @@ const showDrawer = async (student = null) => {
 
       <Drawer
         title={editingStudent ? "Cập nhật thông tin" : "Thêm học sinh mới"}
-        // UPDATE: Responsive width (100% on mobile, 480px on desktop)
         size={screens.xs ? "100%" : 480}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
@@ -267,7 +256,6 @@ const showDrawer = async (student = null) => {
         )}
 
         <Form layout="vertical" form={form} onFinish={handleSave}>
-          {/* Status Field - Always Visible */}
           <Form.Item
             name="status"
             label="Trạng thái học tập"
@@ -300,7 +288,6 @@ const showDrawer = async (student = null) => {
                 }
               >
                 {availableCandidates.map((u) => (
-                  // FIX: Use a template string so 'children' is a single string, not an array
                   <Option key={u.id} value={u.id}>
                     {`${u.name} (${u.username})`}
                   </Option>
@@ -337,64 +324,31 @@ const showDrawer = async (student = null) => {
               </Row>
 
               <Row gutter={16}>
-  {!editingStudent && (
-    <Col span={12}>
-      <Form.Item
-        name="password"
-        label="Mật khẩu"
-        rules={[{ required: true }]}
-      >
-        <Input.Password placeholder="Nhập mật khẩu" />
-      </Form.Item>
-    </Col>
-  )}
-  <Col span={editingStudent ? 24 : 12}>
-    <Form.Item name="grade" label="Khối/Lớp">
-      <Select 
-        placeholder="Chọn hoặc nhập khối/lớp" 
-        showSearch 
-        allowClear
-        mode="tags" // <--- Allows adding new grades that don't exist yet
-        maxCount={1}
-      >
-        {grades.map((g) => (
-          <Option key={g} value={g}>
-            {g}
-          </Option>
-        ))}
-      </Select>
-    </Form.Item>
-  </Col>
-</Row>
-
-              <Divider orientation="left">Thông tin cá nhân</Divider>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item name="parentName" label="Tên phụ huynh">
-                    <Input placeholder="Tên cha/mẹ" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="parentPhone" label="SĐT Phụ huynh">
-                    <Input prefix={<PhoneOutlined />} placeholder="09xxx..." />
+                {!editingStudent && (
+                  <Col span={12}>
+                    <Form.Item
+                      name="password"
+                      label="Mật khẩu"
+                      rules={[{ required: true }]}
+                    >
+                      <Input.Password placeholder="Nhập mật khẩu" />
+                    </Form.Item>
+                  </Col>
+                )}
+                <Col span={editingStudent ? 24 : 12}>
+                  <Form.Item name="grade" label="Khối/Lớp">
+                    <Select 
+                      placeholder="Chọn khối/lớp" 
+                      allowClear
+                    >
+                      {gradeOptions.map(g => (
+                        <Option key={g} value={g}>{g}</Option>
+                      ))}
+                      <Option value="Khác">Khác</Option>
+                    </Select>
                   </Form.Item>
                 </Col>
               </Row>
-
-              <Form.Item name="officialSchool" label="Trường đang học">
-                <Input
-                  prefix={<BankOutlined />}
-                  placeholder="Ví dụ: THPT Chuyên..."
-                />
-              </Form.Item>
-
-              <Form.Item name="address" label="Địa chỉ nhà">
-                <Input
-                  prefix={<HomeOutlined />}
-                  placeholder="Số nhà, đường, quận..."
-                />
-              </Form.Item>
             </>
           )}
 
