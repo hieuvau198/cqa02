@@ -1,11 +1,11 @@
 // src/pages/Admin/Classes/AdminClasses.jsx
 import React, { useEffect, useState } from 'react';
-import { Card, Col, Row, List, Button, Input, Modal, message, Popconfirm, Typography, Form, Select, DatePicker, InputNumber } from 'antd';
+import { Card, Col, Row, List, Button, Input, Modal, message, Popconfirm, Typography, Form, Select, DatePicker, InputNumber, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, RightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as ClassQuery from '../../../data/Center/classQuery';
-import {getAllUsers} from '../../../data/Users/userQuery';
-import {getGrades, getSubjects } from '../../../data/Center/sectionQuery';
+import { getAllUsers } from '../../../data/Users/userQuery';
+import { getGrades, getSubjects } from '../../../data/Center/sectionQuery';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -20,8 +20,13 @@ export default function AdminClasses() {
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
 
+  // Filter States
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(null);
+  
+  // Selection States for Subject & Grade
+  const [activeSubject, setActiveSubject] = useState(null);
+  const [activeGrade, setActiveGrade] = useState(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,16 +75,27 @@ export default function AdminClasses() {
 
   // --- Selection Handlers ---
 
-  const handleSelectYear = (year) => {
+  const handleSelectYear = (yearId) => {
+    const year = years.find(y => y.id === yearId);
     setSelectedYear(year);
     setSelectedTerm(null);
     setClasses([]);
+    setActiveSubject(null);
+    setActiveGrade(null);
     fetchTerms(year.id);
   };
 
-  const handleSelectTerm = (term) => {
+  const handleSelectTerm = (termId) => {
+    const term = terms.find(t => t.id === termId);
     setSelectedTerm(term);
     fetchClasses(term.id);
+    setActiveSubject(null);
+    setActiveGrade(null);
+  };
+
+  const handleSelectSubjectGrade = (subject, grade) => {
+    setActiveSubject(subject);
+    setActiveGrade(grade);
   };
 
   // --- CRUD Handlers ---
@@ -93,9 +109,9 @@ export default function AdminClasses() {
       if (item) {
         form.setFieldsValue({
           name: item.name,
-          grade: item.grade,       // Sets the dropdown to the saved ID
-          subject: item.subject,   // Sets the dropdown to the saved ID
-          teacher: item.teacher,   // Sets the dropdown to the saved ID
+          grade: item.grade,
+          subject: item.subject,
+          teacher: item.teacher,
           dates: [dayjs(item.startTime), dayjs(item.endTime)],
           fee: item.fee,
           status: item.status
@@ -105,7 +121,10 @@ export default function AdminClasses() {
         form.setFieldsValue({
           fee: 300000,
           status: 'Active',
-          dates: [dayjs().startOf('month'), dayjs().endOf('month')]
+          dates: [dayjs().startOf('month'), dayjs().endOf('month')],
+          // Automatically pre-fill the selected subject and grade
+          subject: activeSubject?.id,
+          grade: activeGrade?.id
         });
       }
     }
@@ -121,9 +140,9 @@ export default function AdminClasses() {
         const values = await form.validateFields();
         const classData = {
           name: values.name,
-          grade: values.grade,     // This is strictly the ID string from the Select
-          subject: values.subject, // This is strictly the ID string from the Select
-          teacher: values.teacher, // This is strictly the ID string from the Select
+          grade: values.grade,
+          subject: values.subject,
+          teacher: values.teacher,
           startTime: values.dates[0].toISOString(),
           endTime: values.dates[1].toISOString(),
           fee: values.fee,
@@ -169,13 +188,20 @@ export default function AdminClasses() {
       result = await ClassQuery.deleteYear(id);
       if (result.success) {
         setYears(years.filter(y => y.id !== id));
-        if (selectedYear?.id === id) { setSelectedYear(null); setTerms([]); setClasses([]); }
+        if (selectedYear?.id === id) { 
+          setSelectedYear(null); 
+          setTerms([]); 
+          setClasses([]); 
+        }
       }
     } else if (type === 'term') {
       result = await ClassQuery.deleteTerm(id);
       if (result.success) {
         setTerms(terms.filter(t => t.id !== id));
-        if (selectedTerm?.id === id) { setSelectedTerm(null); setClasses([]); }
+        if (selectedTerm?.id === id) { 
+          setSelectedTerm(null); 
+          setClasses([]); 
+        }
       }
     } else if (type === 'class') {
       result = await ClassQuery.deleteClass(id);
@@ -192,59 +218,137 @@ export default function AdminClasses() {
     window.open(`/admin/classes/${cls.id}`, '_blank');
   };
 
-  // --- Render Helpers ---
-
-  const renderList = (title, data, type, selectedId, onSelect, parentSelected) => (
-    <Card 
-      title={title} 
-      extra={parentSelected ? <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => openModal(type)} /> : null}
-      style={{ height: '100%' }}
-      bodyStyle={{ padding: 0, height: '400px', overflowY: 'auto' }}
-    >
-      <List
-        dataSource={data}
-        renderItem={item => (
-          <List.Item 
-            actions={[
-              <EditOutlined key="edit" onClick={(e) => { e.stopPropagation(); openModal(type, item); }} />,
-              <Popconfirm title="Delete?" onConfirm={(e) => { e.stopPropagation(); handleDelete(type, item.id); }}>
-                <DeleteOutlined key="delete" style={{ color: 'red' }} onClick={(e) => e.stopPropagation()} />
-              </Popconfirm>
-            ]}
-            onClick={() => onSelect && onSelect(item)}
-            style={{ 
-              cursor: onSelect ? 'pointer' : 'default',
-              padding: '12px 16px',
-              backgroundColor: item.id === selectedId ? '#e6f7ff' : 'transparent',
-              borderLeft: item.id === selectedId ? '3px solid #1890ff' : '3px solid transparent'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', paddingRight: 24 }}>
-              <Text strong>{item.name}</Text>
-              {onSelect && <RightOutlined style={{ fontSize: 10, color: '#ccc', alignSelf: 'center' }} />}
-            </div>
-          </List.Item>
-        )}
-      />
-      {!parentSelected && data.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: '#999' }}>Select parent to add items</div>}
-    </Card>
+  // --- Derived Data ---
+  const filteredClasses = classes.filter(
+    c => c.subject === activeSubject?.id && c.grade === activeGrade?.id
   );
 
   return (
     <div>
       <Title level={3} style={{ marginBottom: 20 }}>Class Management</Title>
       
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={8}>
-          {renderList("Năm học", years, 'year', selectedYear?.id, handleSelectYear, true)}
-        </Col>
-        <Col xs={24} md={8}>
-          {renderList("Kỳ học", terms, 'term', selectedTerm?.id, handleSelectTerm, !!selectedYear)}
-        </Col>
-        <Col xs={24} md={8}>
-          {renderList("Lớp học", classes, 'class', null, handleClassClick, !!selectedTerm)}
-        </Col>
-      </Row>
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        {/* Top Filters */}
+        <Card bodyStyle={{ padding: '16px 24px' }}>
+          <Row gutter={24} align="middle">
+            <Col>
+              <Text strong>Year: </Text>
+              <Select 
+                placeholder="Select Year" 
+                style={{ width: 150, marginLeft: 8 }} 
+                value={selectedYear?.id} 
+                onChange={handleSelectYear}
+              >
+                {years.map(y => <Select.Option key={y.id} value={y.id}>{y.name}</Select.Option>)}
+              </Select>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => openModal('year')}>Add</Button>
+              {selectedYear && <Button type="text" icon={<EditOutlined />} onClick={() => openModal('year', selectedYear)} />}
+              {selectedYear && (
+                <Popconfirm title="Delete year?" onConfirm={() => handleDelete('year', selectedYear.id)}>
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              )}
+            </Col>
+
+            <Col>
+              <Text strong>Term: </Text>
+              <Select 
+                placeholder="Select Term" 
+                style={{ width: 150, marginLeft: 8 }} 
+                value={selectedTerm?.id} 
+                onChange={handleSelectTerm}
+                disabled={!selectedYear}
+              >
+                {terms.map(t => <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>)}
+              </Select>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => openModal('term')} disabled={!selectedYear}>Add</Button>
+              {selectedTerm && <Button type="text" icon={<EditOutlined />} onClick={() => openModal('term', selectedTerm)} />}
+              {selectedTerm && (
+                <Popconfirm title="Delete term?" onConfirm={() => handleDelete('term', selectedTerm.id)}>
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              )}
+            </Col>
+          </Row>
+        </Card>
+
+        {/* Main Content Area */}
+        {selectedTerm ? (
+          <Row gutter={[16, 16]}>
+            {/* Subjects & Grades Cards */}
+            <Col xs={24} md={16}>
+              <Row gutter={[16, 16]}>
+                {subjects.map(subject => (
+                  <Col xs={24} sm={12} xl={8} key={subject.id}>
+                    <Card title={subject.name} size="small" style={{ height: '100%' }}>
+                      <Space wrap>
+                        {grades.map(grade => {
+                          const isSelected = activeSubject?.id === subject.id && activeGrade?.id === grade.id;
+                          return (
+                            <Button 
+                              key={grade.id}
+                              type={isSelected ? "primary" : "default"}
+                              onClick={() => handleSelectSubjectGrade(subject, grade)}
+                            >
+                              {grade.name}
+                            </Button>
+                          );
+                        })}
+                      </Space>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </Col>
+
+            {/* Target Classes List */}
+            <Col xs={24} md={8}>
+              <Card 
+                title={activeSubject && activeGrade ? `${activeSubject.name} - ${activeGrade.name}` : 'Classes'}
+                extra={activeSubject && activeGrade ? <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => openModal('class')} /> : null}
+                style={{ height: '100%' }}
+                bodyStyle={{ padding: 0, height: '500px', overflowY: 'auto' }}
+              >
+                {activeSubject && activeGrade ? (
+                  <List
+                    dataSource={filteredClasses}
+                    locale={{ emptyText: 'No classes found' }}
+                    renderItem={item => (
+                      <List.Item 
+                        actions={[
+                          <EditOutlined key="edit" onClick={(e) => { e.stopPropagation(); openModal('class', item); }} />,
+                          <Popconfirm title="Delete?" onConfirm={(e) => { e.stopPropagation(); handleDelete('class', item.id); }}>
+                            <DeleteOutlined key="delete" style={{ color: 'red' }} onClick={(e) => e.stopPropagation()} />
+                          </Popconfirm>
+                        ]}
+                        onClick={() => handleClassClick(item)}
+                        style={{ 
+                          cursor: 'pointer',
+                          padding: '12px 16px',
+                          borderBottom: '1px solid #f0f0f0'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', paddingRight: 24 }}>
+                          <Text strong>{item.name}</Text>
+                          <RightOutlined style={{ fontSize: 10, color: '#ccc', alignSelf: 'center' }} />
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <div style={{ padding: '40px 16px', textAlign: 'center', color: '#999' }}>
+                    Select a subject and grade to view classes
+                  </div>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', backgroundColor: '#fafafa', borderRadius: '8px' }}>
+            <Text type="secondary" style={{ fontSize: '16px' }}>Please select a Year and Term from the top filters to manage classes</Text>
+          </div>
+        )}
+      </Space>
 
       <Modal 
         title={`${editingItem ? 'Edit' : 'Add'} ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
@@ -263,7 +367,6 @@ export default function AdminClasses() {
               <Col span={12}>
                 <Form.Item name="grade" label="Grade" rules={[{ required: true }]}>
                   <Select placeholder="Select Grade">
-                    {/* The value={g.id} guarantees we only save the ID string to Firebase */}
                     {grades.map(g => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}
                   </Select>
                 </Form.Item>
@@ -271,7 +374,6 @@ export default function AdminClasses() {
               <Col span={12}>
                 <Form.Item name="subject" label="Subject" rules={[{ required: true }]}>
                   <Select placeholder="Select Subject">
-                    {/* The value={s.id} guarantees we only save the ID string to Firebase */}
                     {subjects.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
                   </Select>
                 </Form.Item>
@@ -280,7 +382,6 @@ export default function AdminClasses() {
 
             <Form.Item name="teacher" label="Teacher" rules={[{ required: true }]}>
               <Select placeholder="Select Teacher">
-                {/* The value={t.id} guarantees we only save the ID string to Firebase */}
                 {teachers.map(t => <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>)}
               </Select>
             </Form.Item>
