@@ -1,3 +1,4 @@
+// src/routes/AppRoutes.jsx
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Login from '../pages/Auth/Login';
@@ -8,12 +9,21 @@ import AdminUsers from '../pages/Admin/Users/AdminUsers';
 import AdminClasses from '../pages/Admin/Classes/AdminClasses';
 import ClassDetail from '../pages/Admin/Classes/ClassDetail';
 import AdminCurriculum from '../pages/Admin/Curriculum/AdminCurriculum';
+import TeacherLayout from '../pages/Teacher/TeacherLayout';
+import TeacherClasses from '../pages/Teacher/Classes/TeacherClasses';
 
 // Temporary placeholder for other roles
 const RoleDashboard = ({ role }) => (
   <div style={{ padding: 50, textAlign: 'center' }}>
     <h1>{role} Dashboard</h1>
     <p>This page is under construction.</p>
+  </div>
+);
+
+const EmptyProgram = () => (
+  <div style={{ padding: 50, textAlign: 'center' }}>
+    <h1>Chương trình giảng dạy</h1>
+    <p>Nội dung đang được cập nhật...</p>
   </div>
 );
 
@@ -45,7 +55,11 @@ const AppRoutes = () => {
 
       {/* Teacher Routes (Temporary) */}
       <Route element={<ProtectedRoute allowedRoles={['Teacher']} />}>
-        <Route path="/teacher" element={<RoleDashboard role="Teacher" />} />
+        <Route path="/teacher" element={<TeacherLayout />}>
+          <Route index element={<Navigate to="classes" />} />
+          <Route path="classes" element={<TeacherClasses />} />
+          <Route path="curriculum" element={<EmptyProgram />} />
+        </Route>
       </Route>
 
       {/* Student Routes (Temporary) */}

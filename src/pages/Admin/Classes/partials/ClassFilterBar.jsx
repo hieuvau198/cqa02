@@ -6,7 +6,8 @@ const { Text } = Typography;
 
 export default function ClassFilterBar({ 
   years, terms, selectedYear, selectedTerm, 
-  handleSelectYear, handleSelectTerm, openModal, handleDelete 
+  handleSelectYear, handleSelectTerm, openModal, handleDelete,
+  isReadOnly = false // <-- Thêm prop này
 }) {
   return (
     <Card bodyStyle={{ padding: '16px 24px' }}>
@@ -21,9 +22,9 @@ export default function ClassFilterBar({
           >
             {years.map(y => <Select.Option key={y.id} value={y.id}>{y.name}</Select.Option>)}
           </Select>
-          <Button type="link" icon={<PlusOutlined />} onClick={() => openModal('year')}>Add</Button>
-          {selectedYear && <Button type="text" icon={<EditOutlined />} onClick={() => openModal('year', selectedYear)} />}
-          {selectedYear && (
+          {!isReadOnly && <Button type="link" icon={<PlusOutlined />} onClick={() => openModal('year')}>Add</Button>}
+          {!isReadOnly && selectedYear && <Button type="text" icon={<EditOutlined />} onClick={() => openModal('year', selectedYear)} />}
+          {!isReadOnly && selectedYear && (
             <Popconfirm title="Delete year?" onConfirm={() => handleDelete('year', selectedYear.id)}>
               <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
@@ -41,9 +42,9 @@ export default function ClassFilterBar({
           >
             {terms.map(t => <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>)}
           </Select>
-          <Button type="link" icon={<PlusOutlined />} onClick={() => openModal('term')} disabled={!selectedYear}>Add</Button>
-          {selectedTerm && <Button type="text" icon={<EditOutlined />} onClick={() => openModal('term', selectedTerm)} />}
-          {selectedTerm && (
+          {!isReadOnly && <Button type="link" icon={<PlusOutlined />} onClick={() => openModal('term')} disabled={!selectedYear}>Add</Button>}
+          {!isReadOnly && selectedTerm && <Button type="text" icon={<EditOutlined />} onClick={() => openModal('term', selectedTerm)} />}
+          {!isReadOnly && selectedTerm && (
             <Popconfirm title="Delete term?" onConfirm={() => handleDelete('term', selectedTerm.id)}>
               <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>

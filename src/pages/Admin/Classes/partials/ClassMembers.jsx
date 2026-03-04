@@ -39,7 +39,7 @@ export default function ClassMembers({ classId }) {
   // Drawer State
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
-  const [addMode, setAddMode] = useState("new");
+  const [addMode, setAddMode] = useState("existing");
   const [form] = Form.useForm();
   const screens = useBreakpoint();
 
@@ -65,7 +65,7 @@ export default function ClassMembers({ classId }) {
 
   const showDrawer = async (student = null) => {
     setEditingStudent(student);
-    setAddMode("new");
+    setAddMode("existing");
 
     if (student) {
       form.setFieldsValue(student);
@@ -245,10 +245,10 @@ export default function ClassMembers({ classId }) {
               onChange={(e) => setAddMode(e.target.value)}
               buttonStyle="solid"
             >
-              <Radio.Button value="new">Tạo tài khoản mới</Radio.Button>
               <Radio.Button value="existing">
                 Chọn tài khoản có sẵn
               </Radio.Button>
+              <Radio.Button value="new">Tạo tài khoản mới</Radio.Button>
             </Radio.Group>
           </div>
         )}
