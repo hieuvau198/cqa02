@@ -127,9 +127,9 @@ export const getClassesByTerm = async (termId) => {
   }
 };
 
-export const addClass = async (name, termId) => {
+export const addClass = async (data, termId) => {
   try {
-    await addDoc(CLASSES_REF, { name, termId, createdAt: serverTimestamp() });
+    await addDoc(CLASSES_REF, { ...data, termId, createdAt: serverTimestamp() });
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
