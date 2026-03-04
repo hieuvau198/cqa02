@@ -27,6 +27,7 @@ import {
   BankOutlined,
 } from "@ant-design/icons";
 import * as ClassMember from "../../../../data/Center/classMember";
+import { getGrades } from "../../../../data/Center/sectionQuery";
 
 const { Option } = Select;
 const { useBreakpoint } = Grid;
@@ -35,6 +36,7 @@ export default function ClassMembers({ classId }) {
   const [students, setStudents] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [grades, setGrades] = useState([]);
 
   // Drawer State
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -63,19 +65,30 @@ export default function ClassMembers({ classId }) {
     return candidates.filter((c) => !students.some((s) => s.id === c.id));
   }, [candidates, students]);
 
-  const showDrawer = async (student = null) => {
-    setEditingStudent(student);
-    setAddMode("existing");
+  // Create a helper to fetch candidates and grades together
+const fetchCandidatesAndGrades = async () => {
+  const users = await ClassMember.getStudentCandidates();
+  setCandidates(users);
+  const fetchedGrades = await getGrades();
+  setGrades(fetchedGrades);
+};
 
-    if (student) {
-      form.setFieldsValue(student);
-    } else {
-      form.resetFields();
-      form.setFieldsValue({ status: "Đang học" }); // Default
-      await fetchCandidates();
-    }
-    setDrawerVisible(true);
-  };
+const showDrawer = async (student = null) => {
+  setEditingStudent(student);
+  setAddMode("existing");
+
+  if (student) {
+    form.setFieldsValue(student);
+    // Fetch grades so the dropdown populates when editing
+    const fetchedGrades = await getExistingGrades();
+    setGrades(fetchedGrades);
+  } else {
+    form.resetFields();
+    form.setFieldsValue({ status: "Đang học" }); // Default
+    await fetchCandidatesAndGrades(); // <--- Call the new helper here
+  }
+  setDrawerVisible(true);
+};
 
   const handleSave = async (values) => {
     setLoading(true);
@@ -323,15 +336,36 @@ export default function ClassMembers({ classId }) {
                 </Col>
               </Row>
 
-              {!editingStudent && (
-                <Form.Item
-                  name="password"
-                  label="Mật khẩu"
-                  rules={[{ required: true }]}
-                >
-                  <Input.Password placeholder="Nhập mật khẩu" />
-                </Form.Item>
-              )}
+              <Row gutter={16}>
+  {!editingStudent && (
+    <Col span={12}>
+      <Form.Item
+        name="password"
+        label="Mật khẩu"
+        rules={[{ required: true }]}
+      >
+        <Input.Password placeholder="Nhập mật khẩu" />
+      </Form.Item>
+    </Col>
+  )}
+  <Col span={editingStudent ? 24 : 12}>
+    <Form.Item name="grade" label="Khối/Lớp">
+      <Select 
+        placeholder="Chọn hoặc nhập khối/lớp" 
+        showSearch 
+        allowClear
+        mode="tags" // <--- Allows adding new grades that don't exist yet
+        maxCount={1}
+      >
+        {grades.map((g) => (
+          <Option key={g} value={g}>
+            {g}
+          </Option>
+        ))}
+      </Select>
+    </Form.Item>
+  </Col>
+</Row>
 
               <Divider orientation="left">Thông tin cá nhân</Divider>
 

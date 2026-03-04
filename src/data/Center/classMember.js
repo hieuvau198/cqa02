@@ -78,7 +78,8 @@ export const addMemberNew = async (classId, data) => {
         data.name, 
         data.username, 
         data.password, 
-        'Student'
+        'Student',
+        data.grade // <--- Pass the grade here
     );
     
     if (!authResult.success) return authResult;
