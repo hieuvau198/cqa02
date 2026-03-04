@@ -10,7 +10,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { useBreakpoint } = Grid;
 
-export default function ClassPayment({ classId }) {
+export default function ClassPayment({ classId, classInfo }) {
   const [payments, setPayments] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,10 +57,13 @@ export default function ClassPayment({ classId }) {
     } else {
       form.resetFields();
       // Defaults for new payment
+      const defaultFee = classInfo?.fee || classInfo?.price || 0; 
+      
       form.setFieldsValue({ 
         status: 'Chưa thanh toán',
         amountPaid: 0,
-        note: 'Thu học phí' // <--- Default value added here
+        totalPrice: defaultFee, // <--- Cập nhật giá trị học phí ở đây
+        note: 'Thu học phí'
       });
     }
     setDrawerVisible(true);

@@ -42,7 +42,7 @@ export default function ClassDetail() {
     {
       key: 'payment',
       label: 'Học phí',
-      children: <ClassPayment classId={classId} />,
+      children: <ClassPayment classId={classId} classInfo={classInfo} />,
     },
   ];
 

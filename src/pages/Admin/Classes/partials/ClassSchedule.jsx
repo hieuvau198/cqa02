@@ -101,34 +101,62 @@ export default function ClassSchedule({ classId }) {
       });
     } else {
       form.resetFields();
-      form.setFieldValue("date", dayjs());
+      // Khi thêm mới, để ngày ở dạng mảng (array) cho multi-select
+      form.setFieldValue("date", [dayjs()]);
     }
     setIsSlotModalOpen(true);
   };
 
   const handleSaveSlot = async (values) => {
-    const payload = {
-      classId,
-      date: values.date.format("YYYY-MM-DD"),
-      startTime: values.startTime ? values.startTime.format("HH:mm") : null,
-      endTime: values.endTime ? values.endTime.format("HH:mm") : null,
-      topic: values.topic || "",
-    };
+    // Ép kiểu về mảng để xử lý (khi sửa thì DatePicker trả về object, khi tạo mới trả về array)
+    const dates = Array.isArray(values.date) ? values.date : [values.date];
 
-    let result;
     if (editingSlot) {
-      result = await ClassQuery.updateSlot(editingSlot.id, payload);
+      const payload = {
+        classId,
+        date: dates[0].format("YYYY-MM-DD"), // Sửa 1 slot thì lấy ngày đầu tiên
+        startTime: values.startTime ? values.startTime.format("HH:mm") : null,
+        endTime: values.endTime ? values.endTime.format("HH:mm") : null,
+        topic: values.topic || "",
+      };
+      const result = await ClassQuery.updateSlot(editingSlot.id, payload);
+      if (result.success) {
+        message.success("Cập nhật buổi học thành công");
+        setIsSlotModalOpen(false);
+        fetchData();
+      } else {
+        message.error(result.message);
+      }
     } else {
-      payload.attendance = [];
-      result = await ClassQuery.addSlot(payload);
-    }
+      // TẠO NHIỀU SLOT CÙNG LÚC
+      setLoading(true);
+      try {
+        const promises = dates.map(d => {
+          const payload = {
+            classId,
+            date: d.format("YYYY-MM-DD"),
+            startTime: values.startTime ? values.startTime.format("HH:mm") : null,
+            endTime: values.endTime ? values.endTime.format("HH:mm") : null,
+            topic: values.topic || "",
+            attendance: []
+          };
+          return ClassQuery.addSlot(payload);
+        });
 
-    if (result.success) {
-      message.success(editingSlot ? "Slot updated" : "Slot created");
-      setIsSlotModalOpen(false);
-      fetchData();
-    } else {
-      message.error(result.message);
+        const results = await Promise.all(promises);
+        const hasError = results.some(res => !res.success);
+
+        if (hasError) {
+          message.error("Có lỗi xảy ra ở một vài buổi học, vui lòng kiểm tra lại");
+        } else {
+          message.success(`Đã tạo thành công ${dates.length} buổi học`);
+          setIsSlotModalOpen(false);
+          fetchData();
+        }
+      } catch (error) {
+        message.error("Lỗi khi tạo lịch học hàng loạt");
+      }
+      setLoading(false);
     }
   };
 
@@ -423,8 +451,18 @@ export default function ClassSchedule({ classId }) {
         width={screens.xs ? "100%" : 520}
       >
         <Form form={form} layout="vertical" onFinish={handleSaveSlot}>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+          <Form.Item name="date" label={editingSlot ? "Ngày học" : "Chọn các ngày học"} rules={[{ required: true, message: "Vui lòng chọn ngày" }]}>
+            {editingSlot ? (
+              <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+            ) : (
+              <DatePicker 
+                multiple 
+                maxTagCount="responsive" 
+                style={{ width: "100%" }} 
+                format="DD/MM/YYYY" 
+                placeholder="Chọn nhiều ngày (Click để chọn thêm)" 
+              />
+            )}
           </Form.Item>
 
           <Form.Item label="Time Range" style={{ marginBottom: 0 }}>
