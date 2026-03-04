@@ -344,7 +344,7 @@ export default function ClassSchedule({ classId }) {
         </div>
       ),
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
-      defaultSortOrder: "descend",
+      defaultSortOrder: "ascend",
     },
     {
       title: "Topic",

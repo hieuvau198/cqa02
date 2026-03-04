@@ -58,6 +58,8 @@ const AppRoutes = () => {
         <Route path="/teacher" element={<TeacherLayout />}>
           <Route index element={<Navigate to="classes" />} />
           <Route path="classes" element={<TeacherClasses />} />
+          {/* ADD THIS ROUTE FOR TEACHER CLASS DETAIL */}
+          <Route path="classes/:id" element={<ClassDetail />} />
           <Route path="curriculum" element={<EmptyProgram />} />
         </Route>
       </Route>
