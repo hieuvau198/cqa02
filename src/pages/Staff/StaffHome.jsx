@@ -9,18 +9,18 @@ const StaffHome = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ marginTop: '24px' }}>
+    <div className="mt-6">
       <Title level={3}>Trang chủ</Title>
       <Text type="secondary">Chọn một chức năng bên dưới để bắt đầu.</Text>
 
-      <Row gutter={[16, 16]} style={{ marginTop: '24px' }}>
+      <Row gutter={[16, 16]} className="mt-6">
         <Col xs={24} sm={12} md={8}>
           <Card 
             hoverable 
             onClick={() => navigate('/staff/attendance')}
-            style={{ textAlign: 'center', borderRadius: '12px' }}
+            className="text-center rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
-            <CheckSquareOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
+            <CheckSquareOutlined className="text-5xl text-blue-500 mb-4" />
             <Title level={4}>Điểm danh</Title>
             <Text type="secondary">Quản lý điểm danh học viên theo ngày hoặc tháng.</Text>
           </Card>
