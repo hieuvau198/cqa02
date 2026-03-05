@@ -162,6 +162,26 @@ export const getSlotsByClass = async (classId) => {
   } catch (error) { return []; }
 };
 
+// Add this at the bottom of src/data/Center/classQuery.js
+export const getSlotsByDateFilter = async (startDate, endDate) => {
+  // If you only pass startDate, it gets exactly that date. 
+  // If you pass both, it gets a range (useful for "Whole Month").
+  try {
+    let q;
+    if (endDate) {
+      q = query(SLOTS_REF, where("date", ">=", startDate), where("date", "<=", endDate));
+    } else {
+      q = query(SLOTS_REF, where("date", "==", startDate));
+    }
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
+  } catch (error) {
+    console.error("Error fetching slots by date:", error);
+    return [];
+  }
+};
+
 export const addSlot = async (data) => {
   try {
     await addDoc(SLOTS_REF, { ...data, createdAt: serverTimestamp() });

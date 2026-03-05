@@ -12,6 +12,11 @@ import AdminCurriculum from '../pages/Admin/Curriculum/AdminCurriculum';
 import TeacherLayout from '../pages/Teacher/TeacherLayout';
 import TeacherClasses from '../pages/Teacher/Classes/TeacherClasses';
 
+// New Staff Imports
+import StaffLayout from '../pages/Staff/StaffLayout';
+import StaffHome from '../pages/Staff/StaffHome';
+import StaffAttendance from '../pages/Staff/Attendance/StaffAttendance';
+
 // Temporary placeholder for other roles
 const RoleDashboard = ({ role }) => (
   <div style={{ padding: 50, textAlign: 'center' }}>
@@ -48,23 +53,25 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Staff Routes (Temporary) */}
+      {/* Staff Routes */}
       <Route element={<ProtectedRoute allowedRoles={['Staff']} />}>
-        <Route path="/staff" element={<RoleDashboard role="Staff" />} />
+        <Route path="/staff" element={<StaffLayout />}>
+          <Route index element={<StaffHome />} />
+          <Route path="attendance" element={<StaffAttendance />} />
+        </Route>
       </Route>
 
-      {/* Teacher Routes (Temporary) */}
+      {/* Teacher Routes */}
       <Route element={<ProtectedRoute allowedRoles={['Teacher']} />}>
         <Route path="/teacher" element={<TeacherLayout />}>
           <Route index element={<Navigate to="classes" />} />
           <Route path="classes" element={<TeacherClasses />} />
-          {/* ADD THIS ROUTE FOR TEACHER CLASS DETAIL */}
           <Route path="classes/:id" element={<ClassDetail />} />
           <Route path="curriculum" element={<EmptyProgram />} />
         </Route>
       </Route>
 
-      {/* Student Routes (Temporary) */}
+      {/* Student Routes */}
       <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
         <Route path="/student" element={<RoleDashboard role="Student" />} />
       </Route>
