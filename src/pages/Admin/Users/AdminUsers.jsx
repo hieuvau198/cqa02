@@ -21,12 +21,27 @@ import {
 
 const { Option } = Select;
 
+// Helper to remove Vietnamese accents and spaces
+const toSafeString = (str) => {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+};
+
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
+  
+  // Track if user manually typed in these fields so we don't overwrite them
+  const [manualEdits, setManualEdits] = useState({ username: false, password: false });
 
   // --- Fetch Users ---
   const fetchUsers = async () => {
@@ -45,6 +60,7 @@ const AdminUsers = () => {
   // --- Drawer Actions ---
   const showDrawer = (user = null) => {
     setEditingUser(user);
+    setManualEdits({ username: false, password: false }); // Reset tracking
     if (user) {
       form.setFieldsValue(user);
     } else {
@@ -57,6 +73,34 @@ const AdminUsers = () => {
     setDrawerVisible(false);
     setEditingUser(null);
     form.resetFields();
+    setManualEdits({ username: false, password: false }); // Reset tracking
+  };
+
+  // --- Auto-generate logic ---
+  const handleValuesChange = (changedValues, allValues) => {
+    // 1. Check if user manually edited username or password
+    if (changedValues.username !== undefined) {
+      setManualEdits((prev) => ({ ...prev, username: true }));
+    }
+    if (changedValues.password !== undefined) {
+      setManualEdits((prev) => ({ ...prev, password: true }));
+    }
+
+    // 2. Auto-generate logic for new users
+    if (!editingUser) {
+      if (changedValues.name !== undefined || changedValues.grade !== undefined) {
+        const name = allValues.name || "";
+        const grade = allValues.grade || "";
+        
+        const updates = {};
+        updates.username = `${toSafeString(grade)}${toSafeString(name)}`;
+        updates.password = "111111";
+
+        if (Object.keys(updates).length > 0) {
+          form.setFieldsValue(updates);
+        }
+      }
+    }
   };
 
   // --- CRUD Operations ---
@@ -192,7 +236,12 @@ const AdminUsers = () => {
         open={drawerVisible}
         styles={{ body: { paddingBottom: 80 } }}
       >
-        <Form layout="vertical" form={form} onFinish={handleSubmit}>
+        <Form 
+          layout="vertical" 
+          form={form} 
+          onFinish={handleSubmit}
+          onValuesChange={handleValuesChange}
+        >
           <Form.Item
             name="name"
             label="Full Name"

@@ -1,40 +1,26 @@
-// src/data/Center/classQuery.js
 import { db } from "../Firebase/firebase-config";
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs,
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
-} from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { getCache, setCache, clearCache } from "../cacheHelper";
 
-// --- Collection References ---
 const YEARS_REF = collection(db, "cqa02", "app_data", "years");
 const TERMS_REF = collection(db, "cqa02", "app_data", "terms");
 const CLASSES_REF = collection(db, "cqa02", "app_data", "classes");
 const SLOTS_REF = collection(db, "cqa02", "app_data", "slots");
-const ACTIVITIES_REF = collection(db, "cqa02", "app_data", "activities"); // <--- NEW COLLECTION
 
-// Helper for Natural Sort
 const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
-// ==============================
-// 1. OPERATING YEARS CRUD
-// ==============================
-
 export const getAllYears = async () => {
+  const cacheKey = "years";
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const snapshot = await getDocs(YEARS_REF);
-    return snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
+    setCache(cacheKey, data);
+    return data;
   } catch (error) {
-    console.error("Error fetching years:", error);
     return [];
   }
 };
@@ -42,176 +28,160 @@ export const getAllYears = async () => {
 export const addYear = async (name) => {
   try {
     await addDoc(YEARS_REF, { name, createdAt: serverTimestamp() });
+    clearCache("years");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const updateYear = async (id, data) => {
   try {
     await updateDoc(doc(YEARS_REF, id), data);
+    clearCache("years");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const deleteYear = async (id) => {
   try {
     await deleteDoc(doc(YEARS_REF, id));
+    clearCache("years");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
-// ==============================
-// 2. TERMS CRUD
-// ==============================
-
 export const getTermsByYear = async (yearId) => {
+  const cacheKey = `terms_${yearId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const q = query(TERMS_REF, where("yearId", "==", yearId));
     const snapshot = await getDocs(q);
-    return snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .sort(naturalSort);
-  } catch (error) {
-    console.error("Error fetching terms:", error);
-    return [];
-  }
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort(naturalSort);
+    setCache(cacheKey, data);
+    return data;
+  } catch (error) { return []; }
 };
 
 export const addTerm = async (name, yearId) => {
   try {
     await addDoc(TERMS_REF, { name, yearId, createdAt: serverTimestamp() });
+    clearCache("terms_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const updateTerm = async (id, data) => {
   try {
     await updateDoc(doc(TERMS_REF, id), data);
+    clearCache("terms_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const deleteTerm = async (id) => {
   try {
     await deleteDoc(doc(TERMS_REF, id));
+    clearCache("terms_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
-// ==============================
-// 3. CLASSES CRUD
-// ==============================
-
 export const getClassesByTerm = async (termId) => {
+  const cacheKey = `classes_${termId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const q = query(CLASSES_REF, where("termId", "==", termId));
     const snapshot = await getDocs(q);
-    return snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .sort(naturalSort);
-  } catch (error) {
-    console.error("Error fetching classes:", error);
-    return [];
-  }
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort(naturalSort);
+    setCache(cacheKey, data);
+    return data;
+  } catch (error) { return []; }
 };
 
 export const addClass = async (data, termId) => {
   try {
     await addDoc(CLASSES_REF, { ...data, termId, createdAt: serverTimestamp() });
+    clearCache("classes_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const updateClass = async (id, data) => {
   try {
     await updateDoc(doc(CLASSES_REF, id), data);
+    clearCache("classes_");
+    clearCache(`class_${id}`);
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const deleteClass = async (id) => {
   try {
     await deleteDoc(doc(CLASSES_REF, id));
+    clearCache("classes_");
+    clearCache(`class_${id}`);
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const getClassById = async (id) => {
+  const cacheKey = `class_${id}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
-    const docRef = doc(CLASSES_REF, id);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) return { id: snapshot.id, ...snapshot.data() };
+    const snapshot = await getDoc(doc(CLASSES_REF, id));
+    if (snapshot.exists()) {
+      const data = { id: snapshot.id, ...snapshot.data() };
+      setCache(cacheKey, data);
+      return data;
+    }
     return null;
-  } catch (error) {
-    console.error("Error getting class:", error);
-    return null;
-  }
+  } catch (error) { return null; }
 };
 
-// ==============================
-// 4. SCHEDULE / SLOTS CRUD
-// ==============================
-
 export const getSlotsByClass = async (classId) => {
+  const cacheKey = `slots_${classId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const q = query(SLOTS_REF, where("classId", "==", classId));
     const snapshot = await getDocs(q);
-    return snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => {
           const dateDiff = b.date.localeCompare(a.date);
           if (dateDiff !== 0) return dateDiff;
-          const timeA = a.startTime || "";
-          const timeB = b.startTime || "";
-          return timeB.localeCompare(timeA);
+          return (b.startTime || "").localeCompare(a.startTime || "");
       }); 
-  } catch (error) {
-    console.error("Error fetching slots:", error);
-    return [];
-  }
+    setCache(cacheKey, data);
+    return data;
+  } catch (error) { return []; }
 };
 
 export const addSlot = async (data) => {
   try {
     await addDoc(SLOTS_REF, { ...data, createdAt: serverTimestamp() });
+    clearCache("slots_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const updateSlot = async (id, data) => {
   try {
     await updateDoc(doc(SLOTS_REF, id), data);
+    clearCache("slots_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };
 
 export const deleteSlot = async (id) => {
   try {
     await deleteDoc(doc(SLOTS_REF, id));
+    clearCache("slots_");
     return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+  } catch (error) { return { success: false, message: error.message }; }
 };

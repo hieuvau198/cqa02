@@ -1,34 +1,45 @@
-// src/data/Center/activityQuery.js
 import { db } from "../Firebase/firebase-config";
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
-} from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { getCache, setCache, clearCache } from "../cacheHelper";
 
 const ACTIVITIES_REF = collection(db, "cqa02", "app_data", "activities");
 
 export const getActivitiesBySlot = async (slotId) => {
+  const cacheKey = `activities_slot_${slotId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const q = query(ACTIVITIES_REF, where("slotId", "==", slotId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setCache(cacheKey, data);
+    return data;
   } catch (error) {
-    console.error("Error fetching activities:", error);
+    return [];
+  }
+};
+
+export const getActivitiesBySection = async (sectionId) => {
+  const cacheKey = `activities_section_${sectionId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const q = query(ACTIVITIES_REF, where("sectionId", "==", sectionId));
+    const snapshot = await getDocs(q);
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setCache(cacheKey, data);
+    return data;
+  } catch (error) {
     return [];
   }
 };
 
 export const addActivity = async (data) => {
   try {
-    // data should now include { sectionId, name, ... }
     await addDoc(ACTIVITIES_REF, { ...data, createdAt: serverTimestamp() });
+    clearCache("activities_"); 
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
@@ -38,6 +49,7 @@ export const addActivity = async (data) => {
 export const updateActivity = async (id, data) => {
   try {
     await updateDoc(doc(ACTIVITIES_REF, id), data);
+    clearCache("activities_"); 
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
@@ -47,19 +59,9 @@ export const updateActivity = async (id, data) => {
 export const deleteActivity = async (id) => {
   try {
     await deleteDoc(doc(ACTIVITIES_REF, id));
+    clearCache("activities_"); 
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
-  }
-};
-
-export const getActivitiesBySection = async (sectionId) => {
-  try {
-    const q = query(ACTIVITIES_REF, where("sectionId", "==", sectionId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error("Error fetching activities:", error);
-    return [];
   }
 };
