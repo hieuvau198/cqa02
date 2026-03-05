@@ -1,22 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Spin, message, Modal, List, Radio, Button } from 'antd'; // Added UI components
+import { Typography, Spin, message, Modal, List, Radio, Button } from 'antd';
 import dayjs from 'dayjs';
 import AttendanceFilter from './partials/AttendanceFilter';
 import SlotList from './partials/SlotList';
-import { getSlotsByDateFilter, updateSlot } from '../../../data/Center/classQuery'; // Added updateSlot
-import { getClassMembers } from '../../../data/Center/classMember'; // Added to fetch students
+import { getSlotsByDateFilter, updateSlot, getClassById } from '../../../data/Center/classQuery'; 
+import { getClassMembers } from '../../../data/Center/classMember';
 
 const { Title, Text } = Typography;
+
+// HELPER: Remove Vietnamese accents for flexible searching
+const removeVietnameseTones = (str) => {
+  if (!str) return "";
+  return str
+    .normalize('NFD') // Decompose combined characters
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/đ/g, 'd') // Replace special Vietnamese 'đ'
+    .replace(/Đ/g, 'D') // Replace special Vietnamese 'Đ'
+    .toLowerCase()
+    .trim();
+};
 
 const StaffAttendance = () => {
   const [loading, setLoading] = useState(false);
   const [slots, setSlots] = useState([]);
+  
+  // State to hold class details (grade, subject, members, name)
+  const [classDetails, setClassDetails] = useState({});
   
   // Filter States
   const [filterMode, setFilterMode] = useState('date');
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
+  
+  // Search state
+  const [searchText, setSearchText] = useState('');
 
   // --- Attendance States ---
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
@@ -41,7 +59,23 @@ const StaffAttendance = () => {
         const endOfMonth = selectedDate.endOf('month').format('YYYY-MM-DD');
         fetchedSlots = await getSlotsByDateFilter(startOfMonth, endOfMonth);
       }
+      
+      // Fetch class info and members for these slots for the filters to work
+      const uniqueClassIds = [...new Set(fetchedSlots.map(s => s.classId).filter(Boolean))];
+      const newDetails = {};
+      
+      await Promise.all(uniqueClassIds.map(async (classId) => {
+        const classInfo = await getClassById(classId);
+        const members = await getClassMembers(classId);
+        newDetails[classId] = { 
+            ...(classInfo || {}), 
+            members: members || [] 
+        };
+      }));
+      
+      setClassDetails(prev => ({ ...prev, ...newDetails }));
       setSlots(fetchedSlots);
+      
     } catch (error) {
       message.error("Lỗi khi tải dữ liệu lớp học.");
     }
@@ -49,9 +83,29 @@ const StaffAttendance = () => {
   };
 
   const filteredSlots = slots.filter(slot => {
-    const matchGrade = selectedGrade ? slot.gradeId === selectedGrade : true;
-    const matchSubject = selectedSubject ? slot.subjectId === selectedSubject : true;
-    return matchGrade && matchSubject;
+    const cDetail = classDetails[slot.classId] || {};
+    
+    // Compare with class.grade and class.subject
+    const matchGrade = selectedGrade ? cDetail.grade === selectedGrade : true;
+    const matchSubject = selectedSubject ? cDetail.subject === selectedSubject : true;
+    
+    // Check search text against class name OR student names (Unaccented comparison)
+    let matchSearch = true;
+    if (searchText) {
+       const normalizedSearch = removeVietnameseTones(searchText);
+       
+       const normalizedClassName = removeVietnameseTones(cDetail.name || "");
+       const matchClassName = normalizedClassName.includes(normalizedSearch);
+       
+       const members = cDetail.members || [];
+       const matchStudent = members.some(m => 
+         removeVietnameseTones(m.name || "").includes(normalizedSearch)
+       );
+       
+       matchSearch = matchClassName || matchStudent;
+    }
+
+    return matchGrade && matchSubject && matchSearch;
   });
 
   // --- Attendance Functions ---
@@ -61,17 +115,14 @@ const StaffAttendance = () => {
     setFetchingStudents(true);
 
     try {
-      // 1. Fetch members of the class based on the slot's classId
       const fetchedStudents = await getClassMembers(slot.classId);
       setStudents(fetchedStudents);
 
-      // 2. Set default attendance data (Vắng is default)
       const initialData = {};
       const previousAttendance = slot.attendance || [];
 
       fetchedStudents.forEach((student) => {
         const record = previousAttendance.find((r) => r.studentId === student.id);
-        // Default to "Vắng" instead of "Có mặt"
         initialData[student.id] = record ? record.status : "Vắng"; 
       });
 
@@ -102,7 +153,6 @@ const StaffAttendance = () => {
       status: attendanceData[student.id],
     }));
 
-    // Update the slot with new attendance
     const result = await updateSlot(currentAttendanceSlot.id, {
       attendance: attendanceArray,
     });
@@ -110,7 +160,7 @@ const StaffAttendance = () => {
     if (result.success) {
       message.success("Lưu điểm danh thành công");
       setIsAttendanceModalOpen(false);
-      fetchSlots(); // Refresh to ensure slots array gets updated
+      fetchSlots(); 
     } else {
       message.error(result.message);
     }
@@ -129,6 +179,8 @@ const StaffAttendance = () => {
         setSelectedGrade={setSelectedGrade}
         selectedSubject={selectedSubject}
         setSelectedSubject={setSelectedSubject}
+        searchText={searchText}
+        setSearchText={setSearchText}
       />
 
       <div style={{ marginTop: '24px' }}>
@@ -150,7 +202,7 @@ const StaffAttendance = () => {
         width={600}
       >
         {fetchingStudents ? (
-           <div style={{ textAlign: 'center', padding: '20px' }}><Spin /></div>
+           <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#c42121' }}><Spin /></div>
         ) : students.length === 0 ? (
           <div style={{ textAlign: "center", color: "#999" }}>
             Không có học sinh trong lớp này.
@@ -174,7 +226,7 @@ const StaffAttendance = () => {
                       display: "flex",
                       justifyContent: "space-between",
                       width: "100%",
-                      alignItems: "center",
+                      alignItems: "center", 
                     }}
                   >
                     <div>
@@ -191,10 +243,10 @@ const StaffAttendance = () => {
                       }
                       buttonStyle="solid"
                     >
-                      <Radio.Button value="Có mặt" style={{ color: "green" }}>
+                      <Radio.Button value="Có mặt">
                         Có mặt
                       </Radio.Button>
-                      <Radio.Button value="Vắng" style={{ color: "red" }}>
+                      <Radio.Button value="Vắng">
                         Vắng
                       </Radio.Button>
                     </Radio.Group>
