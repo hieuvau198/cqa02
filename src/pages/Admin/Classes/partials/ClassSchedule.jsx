@@ -26,7 +26,6 @@ import {
   ClockCircleOutlined,
   TableOutlined,
   LinkOutlined,
-  AppstoreOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import * as ClassQuery from "../../../../data/Center/classQuery";
@@ -45,6 +44,8 @@ export default function ClassSchedule({ classId }) {
   // --- Slot State ---
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState(null);
+  const [isSavingSlot, setIsSavingSlot] = useState(false); // NEW: loading state for save button
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // NEW: multiple selection state
 
   // --- Attendance State ---
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
@@ -54,9 +55,9 @@ export default function ClassSchedule({ classId }) {
   // --- Matrix State ---
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
 
-  // --- Activity State (NEW) ---
-  const [slotActivities, setSlotActivities] = useState({}); // Map: slotId -> [activities]
-  const [loadingActivities, setLoadingActivities] = useState({}); // Map: slotId -> boolean
+  // --- Activity State ---
+  const [slotActivities, setSlotActivities] = useState({});
+  const [loadingActivities, setLoadingActivities] = useState({});
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState(null);
   const [currentSlotForActivity, setCurrentSlotForActivity] = useState(null);
@@ -75,7 +76,6 @@ export default function ClassSchedule({ classId }) {
       ]);
       setSlots(fetchedSlots);
       setStudents(fetchedStudents);
-      // Clear activity cache on full refresh to ensure data consistency
       setSlotActivities({});
     } catch (error) {
       console.error(error);
@@ -101,20 +101,21 @@ export default function ClassSchedule({ classId }) {
       });
     } else {
       form.resetFields();
-      // Khi thêm mới, để ngày ở dạng mảng (array) cho multi-select
       form.setFieldValue("date", [dayjs()]);
     }
     setIsSlotModalOpen(true);
   };
 
   const handleSaveSlot = async (values) => {
-    // Ép kiểu về mảng để xử lý (khi sửa thì DatePicker trả về object, khi tạo mới trả về array)
+    if (isSavingSlot) return; // FIX: Prevent multiple clicks
+    setIsSavingSlot(true); 
+
     const dates = Array.isArray(values.date) ? values.date : [values.date];
 
     if (editingSlot) {
       const payload = {
         classId,
-        date: dates[0].format("YYYY-MM-DD"), // Sửa 1 slot thì lấy ngày đầu tiên
+        date: dates[0].format("YYYY-MM-DD"),
         startTime: values.startTime ? values.startTime.format("HH:mm") : null,
         endTime: values.endTime ? values.endTime.format("HH:mm") : null,
         topic: values.topic || "",
@@ -128,8 +129,6 @@ export default function ClassSchedule({ classId }) {
         message.error(result.message);
       }
     } else {
-      // TẠO NHIỀU SLOT CÙNG LÚC
-      setLoading(true);
       try {
         const promises = dates.map(d => {
           const payload = {
@@ -156,18 +155,33 @@ export default function ClassSchedule({ classId }) {
       } catch (error) {
         message.error("Lỗi khi tạo lịch học hàng loạt");
       }
-      setLoading(false);
     }
+    setIsSavingSlot(false); // Release lock
   };
 
   const handleDeleteSlot = async (id) => {
     const result = await ClassQuery.deleteSlot(id);
     if (result.success) {
-      message.success("Slot deleted");
+      message.success("Đã xóa buổi học");
       fetchData();
     } else {
       message.error(result.message);
     }
+  };
+
+  // NEW: Handle deleting multiple selected slots
+  const handleDeleteSelected = async () => {
+    setLoading(true);
+    try {
+      const promises = selectedRowKeys.map(id => ClassQuery.deleteSlot(id));
+      await Promise.all(promises);
+      message.success(`Đã xóa ${selectedRowKeys.length} buổi học đã chọn`);
+      setSelectedRowKeys([]); // Reset selection
+      fetchData();
+    } catch (error) {
+      message.error("Có lỗi xảy ra khi xóa danh sách buổi học");
+    }
+    setLoading(false);
   };
 
   // --- 3. Attendance Logic ---
@@ -217,7 +231,7 @@ export default function ClassSchedule({ classId }) {
     }
   };
 
-  // --- 4. Activity Logic (NEW) ---
+  // --- 4. Activity Logic ---
 
   const fetchActivities = async (slotId) => {
     setLoadingActivities((prev) => ({ ...prev, [slotId]: true }));
@@ -261,7 +275,6 @@ export default function ClassSchedule({ classId }) {
     if (result.success) {
       message.success(editingActivity ? "Activity updated" : "Activity added");
       setIsActivityModalOpen(false);
-      // Refresh activities for this slot
       fetchActivities(currentSlotForActivity.id);
     } else {
       message.error(result.message);
@@ -279,47 +292,6 @@ export default function ClassSchedule({ classId }) {
   };
 
   // --- 5. Renderers ---
-
-  // Sub-table for Activities
-  const activityColumns = [
-    { title: "Activity Name", dataIndex: "name", key: "name", width: "25%" },
-    { title: "Description", dataIndex: "description", key: "description" },
-    {
-      title: "Link",
-      key: "link",
-      width: "20%",
-      render: (_, r) =>
-        r.link ? (
-          <a href={r.link} target="_blank" rel="noreferrer">
-            <LinkOutlined /> {r.link}
-          </a>
-        ) : (
-          "-"
-        ),
-    },
-    {
-      title: "Action",
-      key: "action",
-      width: 100,
-      render: (_, r) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenActivityModal(currentSlotForActivity, r)} // Note: logic handled by parent scope usually, but here we need slot info.
-            // Wait, inside expandedRowRender we might not have 'currentSlotForActivity' in state if we just clicked expand.
-            // Better to pass slot explicitly.
-          />
-          <Popconfirm
-            title="Delete activity?"
-            onConfirm={() => handleDeleteActivity(r.id, r.slotId)}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
 
   const expandedRowRender = (slot) => {
     return <ActivityManager slot={slot} />;
@@ -399,6 +371,14 @@ export default function ClassSchedule({ classId }) {
     },
   ];
 
+  // NEW: Row Selection config
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+  };
+
   return (
     <div style={{ padding: "20px 0" }}>
       <div
@@ -409,6 +389,19 @@ export default function ClassSchedule({ classId }) {
           gap: "10px",
         }}
       >
+        {/* NEW: Show Delete Selected button if items are checked */}
+        {selectedRowKeys.length > 0 && (
+          <Popconfirm
+            title={`Xóa ${selectedRowKeys.length} buổi học đã chọn?`}
+            onConfirm={handleDeleteSelected}
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger icon={<DeleteOutlined />}>
+              Xóa đã chọn ({selectedRowKeys.length})
+            </Button>
+          </Popconfirm>
+        )}
+
         <Button icon={<TableOutlined />} onClick={() => setIsMatrixOpen(true)}>
           View Details
         </Button>
@@ -422,19 +415,18 @@ export default function ClassSchedule({ classId }) {
       </div>
 
       <Table
+        rowSelection={rowSelection} // Added rowSelection
         columns={columns}
         dataSource={slots}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 10 }} // Increased page size for better view
+        pagination={{ pageSize: 10 }}
         scroll={{ x: 700 }}
         expandable={{
           expandedRowRender: expandedRowRender,
-          // No need for onExpand logic here anymore as it's handled in ActivityManager
         }}
       />
 
-      {/* MATRIX MODAL */}
       <ClassAttendanceMatrix
         isOpen={isMatrixOpen}
         onClose={() => setIsMatrixOpen(false)}
@@ -442,12 +434,12 @@ export default function ClassSchedule({ classId }) {
         students={students}
       />
 
-      {/* CREATE / EDIT SLOT MODAL */}
       <Modal
         title={editingSlot ? "Edit Slot" : "New Slot"}
         open={isSlotModalOpen}
         onCancel={() => setIsSlotModalOpen(false)}
         onOk={() => form.submit()}
+        confirmLoading={isSavingSlot} // NEW: Adds spinner & disables button while saving
         width={screens.xs ? "100%" : 520}
       >
         <Form form={form} layout="vertical" onFinish={handleSaveSlot}>
@@ -498,7 +490,7 @@ export default function ClassSchedule({ classId }) {
         </Form>
       </Modal>
 
-      {/* ACTIVITY MODAL (NEW) */}
+      {/* ACTIVITY MODAL */}
       <Modal
         title={editingActivity ? "Edit Activity" : "New Activity"}
         open={isActivityModalOpen}
