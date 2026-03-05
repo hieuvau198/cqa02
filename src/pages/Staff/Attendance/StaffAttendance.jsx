@@ -1,25 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Spin, message } from 'antd';
+import { Typography, Spin, message, Modal, List, Radio, Button } from 'antd'; // Added UI components
 import dayjs from 'dayjs';
 import AttendanceFilter from './partials/AttendanceFilter';
 import SlotList from './partials/SlotList';
-import { getSlotsByDateFilter } from '../../../data/Center/classQuery';
+import { getSlotsByDateFilter, updateSlot } from '../../../data/Center/classQuery'; // Added updateSlot
+import { getClassMembers } from '../../../data/Center/classMember'; // Added to fetch students
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const StaffAttendance = () => {
   const [loading, setLoading] = useState(false);
   const [slots, setSlots] = useState([]);
   
   // Filter States
-  const [filterMode, setFilterMode] = useState('date'); // 'date' or 'month'
+  const [filterMode, setFilterMode] = useState('date');
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
+  // --- Attendance States ---
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [currentAttendanceSlot, setCurrentAttendanceSlot] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [attendanceData, setAttendanceData] = useState({});
+  const [fetchingStudents, setFetchingStudents] = useState(false);
+
   useEffect(() => {
     fetchSlots();
-  }, [filterMode, selectedDate]); // Refetch when date changes
+  }, [filterMode, selectedDate]); 
 
   const fetchSlots = async () => {
     setLoading(true);
@@ -40,14 +48,73 @@ const StaffAttendance = () => {
     setLoading(false);
   };
 
-  // Client-side filtering for Grade and Subject 
-  // (Assuming your slot objects have gradeId and subjectId attached. If they are attached to the 'class' object, 
-  // you might need to hydrate them or attach them when creating slots).
   const filteredSlots = slots.filter(slot => {
     const matchGrade = selectedGrade ? slot.gradeId === selectedGrade : true;
     const matchSubject = selectedSubject ? slot.subjectId === selectedSubject : true;
     return matchGrade && matchSubject;
   });
+
+  // --- Attendance Functions ---
+  const handleOpenAttendance = async (slot) => {
+    setCurrentAttendanceSlot(slot);
+    setIsAttendanceModalOpen(true);
+    setFetchingStudents(true);
+
+    try {
+      // 1. Fetch members of the class based on the slot's classId
+      const fetchedStudents = await getClassMembers(slot.classId);
+      setStudents(fetchedStudents);
+
+      // 2. Set default attendance data (Vắng is default)
+      const initialData = {};
+      const previousAttendance = slot.attendance || [];
+
+      fetchedStudents.forEach((student) => {
+        const record = previousAttendance.find((r) => r.studentId === student.id);
+        // Default to "Vắng" instead of "Có mặt"
+        initialData[student.id] = record ? record.status : "Vắng"; 
+      });
+
+      setAttendanceData(initialData);
+    } catch (error) {
+      message.error("Lỗi tải danh sách học sinh.");
+    } finally {
+      setFetchingStudents(false);
+    }
+  };
+
+  const handleAttendanceChange = (studentId, status) => {
+    setAttendanceData((prev) => ({ ...prev, [studentId]: status }));
+  };
+
+  const setAllAttendance = (status) => {
+    const newData = {};
+    students.forEach((s) => (newData[s.id] = status));
+    setAttendanceData(newData);
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!currentAttendanceSlot) return;
+    
+    const attendanceArray = students.map((student) => ({
+      studentId: student.id,
+      name: student.name,
+      status: attendanceData[student.id],
+    }));
+
+    // Update the slot with new attendance
+    const result = await updateSlot(currentAttendanceSlot.id, {
+      attendance: attendanceArray,
+    });
+
+    if (result.success) {
+      message.success("Lưu điểm danh thành công");
+      setIsAttendanceModalOpen(false);
+      fetchSlots(); // Refresh to ensure slots array gets updated
+    } else {
+      message.error(result.message);
+    }
+  };
 
   return (
     <div>
@@ -70,9 +137,75 @@ const StaffAttendance = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <SlotList slots={filteredSlots} />
+          <SlotList slots={filteredSlots} onOpenAttendance={handleOpenAttendance} />
         )}
       </div>
+
+      {/* ATTENDANCE MODAL */}
+      <Modal
+        title={`Điểm danh - ${currentAttendanceSlot?.topic || 'Buổi học'}`}
+        open={isAttendanceModalOpen}
+        onCancel={() => setIsAttendanceModalOpen(false)}
+        onOk={handleSaveAttendance}
+        width={600}
+      >
+        {fetchingStudents ? (
+           <div style={{ textAlign: 'center', padding: '20px' }}><Spin /></div>
+        ) : students.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#999" }}>
+            Không có học sinh trong lớp này.
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 15, display: "flex", gap: 10 }}>
+              <Button size="small" onClick={() => setAllAttendance("Có mặt")}>
+                Đánh dấu tất cả Có mặt
+              </Button>
+              <Button size="small" onClick={() => setAllAttendance("Vắng")}>
+                Đánh dấu tất cả Vắng
+              </Button>
+            </div>
+            <List
+              dataSource={students}
+              renderItem={(item) => (
+                <List.Item>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <Text strong>{item.name}</Text>
+                      <br />
+                      <Text type="secondary" style={{ fontSize: "12px" }}>
+                        {item.username}
+                      </Text>
+                    </div>
+                    <Radio.Group
+                      value={attendanceData[item.id]}
+                      onChange={(e) =>
+                        handleAttendanceChange(item.id, e.target.value)
+                      }
+                      buttonStyle="solid"
+                    >
+                      <Radio.Button value="Có mặt" style={{ color: "green" }}>
+                        Có mặt
+                      </Radio.Button>
+                      <Radio.Button value="Vắng" style={{ color: "red" }}>
+                        Vắng
+                      </Radio.Button>
+                    </Radio.Group>
+                  </div>
+                </List.Item>
+              )}
+              style={{ maxHeight: "400px", overflowY: "auto" }}
+            />
+          </>
+        )}
+      </Modal>
     </div>
   );
 };

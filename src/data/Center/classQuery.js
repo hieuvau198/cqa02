@@ -162,10 +162,12 @@ export const getSlotsByClass = async (classId) => {
   } catch (error) { return []; }
 };
 
-// Add this at the bottom of src/data/Center/classQuery.js
 export const getSlotsByDateFilter = async (startDate, endDate) => {
-  // If you only pass startDate, it gets exactly that date. 
-  // If you pass both, it gets a range (useful for "Whole Month").
+  // Add Cache logic
+  const cacheKey = `slots_date_${startDate}_${endDate || 'single'}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     let q;
     if (endDate) {
@@ -174,8 +176,11 @@ export const getSlotsByDateFilter = async (startDate, endDate) => {
       q = query(SLOTS_REF, where("date", "==", startDate));
     }
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
+      
+    setCache(cacheKey, data); // Set cache
+    return data;
   } catch (error) {
     console.error("Error fetching slots by date:", error);
     return [];

@@ -5,15 +5,16 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const SlotList = ({ slots }) => {
+// Receive onOpenAttendance as a prop
+const SlotList = ({ slots, onOpenAttendance }) => { 
   return (
     <List
       grid={{
         gutter: 16,
-        xs: 1, // 1 column on mobile
-        sm: 2, // 2 columns on small tablets
+        xs: 1, 
+        sm: 2, 
         md: 2, 
-        lg: 3, // 3 columns on desktops
+        lg: 3, 
         xl: 4,
       }}
       dataSource={slots}
@@ -25,7 +26,13 @@ const SlotList = ({ slots }) => {
             style={{ borderRadius: '8px' }}
             bodyStyle={{ padding: '16px' }}
             actions={[
-              <Button type="primary" key="attendance">Điểm danh ngay</Button>
+              <Button 
+                type="primary" 
+                key="attendance" 
+                onClick={() => onOpenAttendance(item)} // Call the handler here
+              >
+                Điểm danh ngay
+              </Button>
             ]}
           >
             <Card.Meta
@@ -37,7 +44,6 @@ const SlotList = ({ slots }) => {
                     {dayjs(item.date).format('DD/MM/YYYY')} | {item.startTime} - {item.endTime}
                   </Text>
                   
-                  {/* Optional: Add Room / Teacher if available in your payload */}
                   <Text type="secondary">
                     <TeamOutlined style={{ marginRight: 4 }} /> 
                     Phòng: {item.room || 'N/A'}
