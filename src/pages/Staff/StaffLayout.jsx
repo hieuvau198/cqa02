@@ -12,28 +12,44 @@ const StaffLayout = () => {
   const navigate = useNavigate();
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <Header style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        background: '#fff', 
-        padding: '0 16px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Button type="text" icon={<HomeOutlined />} onClick={() => navigate('/staff')} />
-          <Title level={4} style={{ margin: 0 }}>Staff Portal</Title>
+    <Layout className="min-h-screen bg-yellow-50/30">
+      
+      {/* FIXED: Added !bg-white/90 to override Ant Design's default black header */}
+      <Header className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-8 !bg-white/90 backdrop-blur-md shadow-sm border-b-[3px] border-yellow-400 !h-16 leading-[normal]">
+        
+        {/* Left Side: Navigation & Title */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/staff')}
+            className="flex items-center justify-center w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl hover:bg-yellow-400 hover:text-white transition-all duration-300 shadow-sm cursor-pointer border-none outline-none"
+            title="Trang chủ"
+          >
+            <HomeOutlined className="text-lg" />
+          </button>
+          
+          <Title level={4} className="!mb-0 !text-gray-800 font-semibold tracking-wide">
+            Cổng Quản Lý Trung Tâm CQA
+          </Title>
         </div>
-        <Button type="text" danger icon={<LogoutOutlined />} onClick={logout}>
+        
+        {/* Right Side: Logout Action */}
+        <Button 
+          type="text" 
+          danger 
+          icon={<LogoutOutlined />} 
+          onClick={logout}
+          className="flex items-center hover:bg-red-50 rounded-xl px-4 py-5 font-medium transition-colors"
+        >
           Đăng xuất
         </Button>
+
       </Header>
       
-      {/* Mobile-friendly padding */}
-      <Content style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      {/* Main Content Area */}
+      <Content className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full transition-all">
         <Outlet />
       </Content>
+      
     </Layout>
   );
 };

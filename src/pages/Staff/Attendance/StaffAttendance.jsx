@@ -167,8 +167,11 @@ const StaffAttendance = () => {
   };
 
   return (
-    <div>
-      <Title level={3}>Điểm danh lớp học</Title>
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto bg-slate-50/50 min-h-screen">
+      <div className="mb-8">
+        <Title level={2} className="!mb-1 !text-gray-800">Điểm danh lớp học</Title>
+        <Text className="text-gray-500">Tìm kiếm lớp học, chọn ngày và thực hiện điểm danh học viên.</Text>
+      </div>
       
       <AttendanceFilter 
         filterMode={filterMode}
