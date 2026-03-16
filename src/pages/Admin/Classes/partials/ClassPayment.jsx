@@ -58,11 +58,11 @@ export default function ClassPayment({ classId, classInfo }) {
       const defaultFee = classInfo?.fee || classInfo?.price || 0; 
       
       form.setFieldsValue({ 
-        status: 'Đã thanh toán', // Changed default to "Đã thanh toán"
-        amountPaid: defaultFee,  // Default to same as total price
+        status: 'Đã thanh toán', 
+        amountPaid: defaultFee,  
         totalPrice: defaultFee, 
         note: 'Thu học phí',
-        className: classInfo?.name || '' // Auto-assign class name from props
+        className: classInfo?.name || '' 
       });
     }
     setDrawerVisible(true);
@@ -109,12 +109,22 @@ export default function ClassPayment({ classId, classInfo }) {
   };
 
   // Helper to get Student Name from ID for Table display 
-  // (Alternatively you can now use record.studentName if you prefer)
   const getStudentName = (studentId, record) => {
     if (record?.studentName) return record.studentName;
     const student = students.find(s => s.id === studentId);
     return student ? student.name : <i style={{color:'#999'}}>Unknown Student</i>;
   };
+
+  // Filter out students who already have a payment for this class
+  const availableStudents = students.filter(student => {
+    // Always include the student if we are currently editing their specific payment
+    if (editingPayment && editingPayment.studentId === student.id) {
+      return true;
+    }
+    // Check if the student ID is already in the payments array
+    const hasPayment = payments.some(payment => payment.studentId === student.id);
+    return !hasPayment; // Keep if they DON'T have a payment
+  });
 
   const columns = [
     { 
@@ -210,14 +220,14 @@ export default function ClassPayment({ classId, classInfo }) {
                 showSearch
                 optionFilterProp="children"
                 onChange={(value) => {
-                    // Auto-fill the student name when selecting a student
                     const selectedStudent = students.find(s => s.id === value);
                     if (selectedStudent) {
                         form.setFieldsValue({ studentName: selectedStudent.name });
                     }
                 }}
             >
-                {students.map(s => (
+                {/* Use the filtered availableStudents list here */}
+                {availableStudents.map(s => (
                     <Option key={s.id} value={s.id}>
                         {s.name} ({s.username})
                     </Option>
@@ -225,7 +235,6 @@ export default function ClassPayment({ classId, classInfo }) {
             </Select>
           </Form.Item>
 
-          {/* New Editable Field for Student Name */}
           <Form.Item 
             name="studentName" 
             label="Tên học sinh lưu trữ" 
@@ -234,7 +243,6 @@ export default function ClassPayment({ classId, classInfo }) {
             <Input placeholder="Tự động điền khi chọn học sinh" />
           </Form.Item>
 
-          {/* New Editable Field for Class Name */}
           <Form.Item 
             name="className" 
             label="Tên lớp lưu trữ" 
@@ -254,7 +262,6 @@ export default function ClassPayment({ classId, classInfo }) {
                 parser={value => value.replace(/\$\s?|(,*)/g, '')}
                 prefix="₫"
                 onChange={(val) => {
-                    // Optional: If you want 'Đã thanh toán' to update along with 'Tổng học phí' while typing
                     if (!editingPayment && form.getFieldValue('status') === 'Đã thanh toán') {
                        form.setFieldsValue({ amountPaid: val });
                     }

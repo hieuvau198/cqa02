@@ -80,26 +80,25 @@ const AdminDashboard = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2>Thống kê doanh thu</h2>
       
       <div style={{ marginBottom: '20px' }}>
         <button 
           onClick={() => setTimeRange('day')} 
           style={{ marginRight: 10, fontWeight: timeRange === 'day' ? 'bold' : 'normal' }}
         >
-          10 Ngày Gần Nhất
+          10 Ngày
         </button>
         <button 
           onClick={() => setTimeRange('week')} 
           style={{ marginRight: 10, fontWeight: timeRange === 'week' ? 'bold' : 'normal' }}
         >
-          10 Tuần Gần Nhất
+          10 Tuần
         </button>
         <button 
           onClick={() => setTimeRange('month')}
           style={{ fontWeight: timeRange === 'month' ? 'bold' : 'normal' }}
         >
-          10 Tháng Gần Nhất
+          10 Tháng
         </button>
       </div>
 
@@ -109,11 +108,11 @@ const AdminDashboard = () => {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="label" />
             <YAxis 
-              tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)}
+              tickFormatter={(value) => new Intl.NumberFormat({ style: 'currency', currency: 'VND' }).format(value)}
             />
             <Tooltip 
   formatter={(value, name, props) => {
-    const formattedMoney = new Intl.NumberFormat('vi-VN', { 
+    const formattedMoney = new Intl.NumberFormat({ 
       style: 'currency', 
       currency: 'VND' 
     }).format(value);

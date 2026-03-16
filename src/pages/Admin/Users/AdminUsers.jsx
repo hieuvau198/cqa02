@@ -258,7 +258,6 @@ const AdminUsers = () => {
     <div>
       {/* Header and Add Button */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>User Management</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showDrawer(null)}>
           Add New User
         </Button>
@@ -289,10 +288,10 @@ const AdminUsers = () => {
           onChange={setSortBy}
           style={{ width: 180 }}
         >
-          <Option value="date_desc">Date Created (Newest)</Option>
-          <Option value="date_asc">Date Created (Oldest)</Option>
-          <Option value="name_asc">Name (A-Z)</Option>
-          <Option value="name_desc">Name (Z-A)</Option>
+          <Option value="date_desc">Newest</Option>
+          <Option value="date_asc">Oldest</Option>
+          <Option value="name_asc">A-Z</Option>
+          <Option value="name_desc">Z-A</Option>
         </Select>
       </div>
 

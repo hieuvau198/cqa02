@@ -1,6 +1,6 @@
 // src/pages/Admin/Classes/partials/ClassMembers.jsx
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, message, Popconfirm, Tag } from "antd";
+import { Table, Button, Space, message, Popconfirm, Tag, Input } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -15,6 +15,7 @@ import ClassMemberDrawer from "./ClassMemberDrawer"; // Import the separated com
 export default function ClassMembers({ classId }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState(""); // State for search
 
   // Drawer State
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -45,6 +46,15 @@ export default function ClassMembers({ classId }) {
       message.error(result.message);
     }
   };
+
+  // Filter students based on search text (name or username)
+  const filteredStudents = students.filter(student => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      student.name?.toLowerCase().includes(searchLower) ||
+      student.username?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const columns = [
     {
@@ -130,10 +140,17 @@ export default function ClassMembers({ classId }) {
       <div
         style={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between", // Changed to space-between
+          alignItems: "center",
           marginBottom: 16,
         }}
       >
+        <Input.Search
+          placeholder="Tìm kiếm học sinh theo tên, tài khoản..."
+          allowClear
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ width: 300 }}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -145,7 +162,7 @@ export default function ClassMembers({ classId }) {
 
       <Table
         columns={columns}
-        dataSource={students}
+        dataSource={filteredStudents} // Use filtered list
         rowKey="id"
         loading={loading}
         pagination={{ pageSize: 10 }}
