@@ -14,12 +14,10 @@ import dayjs from "dayjs";
 import * as ClassQuery from "../../../../data/Center/classQuery";
 import * as ClassMember from "../../../../data/Center/classMember";
 import ClassAttendanceMatrix from "./ClassAttendanceMatrix";
-import ActivityManager from "./partials/ActivityManager";
 
 // Imported Refactored Modals
 import SlotModal from "./SlotModal";
 import AttendanceModal from "./AttendanceModal";
-import ActivityModal from "./ActivityModal";
 
 export default function ClassSchedule({ classId }) {
   const [slots, setSlots] = useState([]);
@@ -36,10 +34,6 @@ export default function ClassSchedule({ classId }) {
   const [currentAttendanceSlot, setCurrentAttendanceSlot] = useState(null);
 
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
-
-  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [editingActivity, setEditingActivity] = useState(null);
-  const [currentSlotForActivity, setCurrentSlotForActivity] = useState(null);
 
   // --- 1. Initial Data Fetching ---
   const fetchData = async () => {
@@ -167,34 +161,7 @@ export default function ClassSchedule({ classId }) {
     }
   };
 
-  // --- 4. Activity Logic ---
-  const handleSaveActivity = async (values) => {
-    if (!currentSlotForActivity) return;
-
-    const payload = {
-      slotId: currentSlotForActivity.id,
-      name: values.name,
-      description: values.description || "",
-      link: values.link || "",
-    };
-
-    let result;
-    if (editingActivity) {
-      result = await ClassQuery.updateActivity(editingActivity.id, payload);
-    } else {
-      result = await ClassQuery.addActivity(payload);
-    }
-
-    if (result.success) {
-      message.success(editingActivity ? "Activity updated" : "Activity added");
-      setIsActivityModalOpen(false);
-      fetchData(); // Simplistic refresh, or pass a callback down if preferred
-    } else {
-      message.error(result.message);
-    }
-  };
-
-  // --- 5. Renderers ---
+  // --- 4. Renderers ---
   const columns = [
     {
       title: "Date & Time",
@@ -291,9 +258,6 @@ export default function ClassSchedule({ classId }) {
         loading={loading}
         pagination={{ pageSize: 10 }}
         scroll={{ x: 700 }}
-        expandable={{
-          expandedRowRender: (slot) => <ActivityManager slot={slot} />,
-        }}
       />
 
       {/* MATRIX MODAL */}
@@ -319,13 +283,6 @@ export default function ClassSchedule({ classId }) {
         onSave={handleSaveAttendance}
         students={students}
         currentSlot={currentAttendanceSlot}
-      />
-
-      <ActivityModal
-        isOpen={isActivityModalOpen}
-        onClose={() => setIsActivityModalOpen(false)}
-        onSave={handleSaveActivity}
-        editingActivity={editingActivity}
       />
     </div>
   );
