@@ -4,7 +4,7 @@ import { Table, Button, Space, Drawer, Form, InputNumber, Select, message, Popco
 import { PlusOutlined, EditOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import * as ClassQuery from '../../../../data/Center/classQuery';
 import * as PaymentQuery from '../../../../data/Center/paymentQuery'; 
-import * as ClassMember from '../../../../data/Center/classMember'; // <--- ADD THIS IMPORT
+import * as ClassMember from '../../../../data/Center/classMember'; 
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -15,7 +15,6 @@ export default function ClassPayment({ classId, classInfo }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // ... (keep existing state definitions) ...
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [form] = Form.useForm();
@@ -32,7 +31,6 @@ export default function ClassPayment({ classId, classInfo }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // FIX: Use ClassMember.getClassMembers instead of ClassQuery.getStudentsInClass
       const [fetchedPayments, fetchedStudents] = await Promise.all([
         PaymentQuery.getPaymentsByClass(classId),
         ClassMember.getClassMembers(classId)
@@ -60,10 +58,11 @@ export default function ClassPayment({ classId, classInfo }) {
       const defaultFee = classInfo?.fee || classInfo?.price || 0; 
       
       form.setFieldsValue({ 
-        status: 'Chưa thanh toán',
-        amountPaid: 0,
-        totalPrice: defaultFee, // <--- Cập nhật giá trị học phí ở đây
-        note: 'Thu học phí'
+        status: 'Đã thanh toán', // Changed default to "Đã thanh toán"
+        amountPaid: defaultFee,  // Default to same as total price
+        totalPrice: defaultFee, 
+        note: 'Thu học phí',
+        className: classInfo?.name || '' // Auto-assign class name from props
       });
     }
     setDrawerVisible(true);
@@ -109,8 +108,10 @@ export default function ClassPayment({ classId, classInfo }) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
-  // Helper to get Student Name from ID
-  const getStudentName = (studentId) => {
+  // Helper to get Student Name from ID for Table display 
+  // (Alternatively you can now use record.studentName if you prefer)
+  const getStudentName = (studentId, record) => {
+    if (record?.studentName) return record.studentName;
     const student = students.find(s => s.id === studentId);
     return student ? student.name : <i style={{color:'#999'}}>Unknown Student</i>;
   };
@@ -120,7 +121,7 @@ export default function ClassPayment({ classId, classInfo }) {
       title: 'Học sinh', 
       dataIndex: 'studentId', 
       key: 'student',
-      render: (id) => <b>{getStudentName(id)}</b>
+      render: (id, record) => <b>{getStudentName(id, record)}</b>
     },
     { 
       title: 'Học phí (Tổng)', 
@@ -193,7 +194,6 @@ export default function ClassPayment({ classId, classInfo }) {
 
       <Drawer
         title={editingPayment ? "Sửa khoản thu" : "Tạo khoản thu mới"}
-        // UPDATE: Responsive width
         width={screens.xs ? '100%' : 450}
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
@@ -209,6 +209,13 @@ export default function ClassPayment({ classId, classInfo }) {
                 placeholder="Chọn học sinh" 
                 showSearch
                 optionFilterProp="children"
+                onChange={(value) => {
+                    // Auto-fill the student name when selecting a student
+                    const selectedStudent = students.find(s => s.id === value);
+                    if (selectedStudent) {
+                        form.setFieldsValue({ studentName: selectedStudent.name });
+                    }
+                }}
             >
                 {students.map(s => (
                     <Option key={s.id} value={s.id}>
@@ -216,6 +223,24 @@ export default function ClassPayment({ classId, classInfo }) {
                     </Option>
                 ))}
             </Select>
+          </Form.Item>
+
+          {/* New Editable Field for Student Name */}
+          <Form.Item 
+            name="studentName" 
+            label="Tên học sinh lưu trữ" 
+            rules={[{ required: true, message: 'Tên học sinh không được để trống' }]}
+          >
+            <Input placeholder="Tự động điền khi chọn học sinh" />
+          </Form.Item>
+
+          {/* New Editable Field for Class Name */}
+          <Form.Item 
+            name="className" 
+            label="Tên lớp lưu trữ" 
+            rules={[{ required: true, message: 'Tên lớp không được để trống' }]}
+          >
+            <Input placeholder="Tên lớp" />
           </Form.Item>
 
           <Form.Item 
@@ -228,6 +253,12 @@ export default function ClassPayment({ classId, classInfo }) {
                 formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 parser={value => value.replace(/\$\s?|(,*)/g, '')}
                 prefix="₫"
+                onChange={(val) => {
+                    // Optional: If you want 'Đã thanh toán' to update along with 'Tổng học phí' while typing
+                    if (!editingPayment && form.getFieldValue('status') === 'Đã thanh toán') {
+                       form.setFieldsValue({ amountPaid: val });
+                    }
+                }}
             />
           </Form.Item>
 
