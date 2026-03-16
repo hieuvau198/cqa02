@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Table, 
   Button, 
@@ -36,6 +36,13 @@ const toSafeString = (str) => {
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // --- Filter & Sort States ---
+  const [searchText, setSearchText] = useState("");
+  const [filterGrade, setFilterGrade] = useState(null);
+  const [sortBy, setSortBy] = useState("date_desc"); // Default sort
+
+  // --- Drawer States ---
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
@@ -47,15 +54,50 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     setLoading(true);
     const data = await getAllUsers();
-    // Sort by creation time if available, or name
-    const sortedData = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-    setUsers(sortedData);
+    setUsers(data);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // --- Filter and Sort Logic ---
+  const processedUsers = useMemo(() => {
+    let result = [...users];
+
+    // 1. Search by Name (ignoring accents and case)
+    if (searchText) {
+      const safeSearch = toSafeString(searchText);
+      result = result.filter(u => toSafeString(u.name).includes(safeSearch));
+    }
+
+    // 2. Filter by Grade (ignoring accents, case, and spaces)
+    if (filterGrade) {
+      const safeFilterGrade = toSafeString(filterGrade);
+      result = result.filter(u => toSafeString(u.grade) === safeFilterGrade);
+    }
+
+    // 3. Sort
+    result.sort((a, b) => {
+      if (sortBy === 'date_desc') {
+        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+      }
+      if (sortBy === 'date_asc') {
+        return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+      }
+      if (sortBy === 'name_asc') {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (sortBy === 'name_desc') {
+        return (b.name || "").localeCompare(a.name || "");
+      }
+      return 0;
+    });
+
+    return result;
+  }, [users, searchText, filterGrade, sortBy]);
+
 
   // --- Drawer Actions ---
   const showDrawer = (user = null) => {
@@ -214,6 +256,7 @@ const AdminUsers = () => {
 
   return (
     <div>
+      {/* Header and Add Button */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>User Management</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showDrawer(null)}>
@@ -221,9 +264,42 @@ const AdminUsers = () => {
         </Button>
       </div>
 
+      {/* Toolbar: Search, Filter, Sort */}
+      <div style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <Input.Search
+          placeholder="Search by name..."
+          allowClear
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ width: 250 }}
+        />
+        
+        <Select
+          placeholder="Filter by Grade"
+          allowClear
+          onChange={setFilterGrade}
+          style={{ width: 150 }}
+        >
+          {gradeOptions.map(g => (
+            <Option key={g} value={g}>{g}</Option>
+          ))}
+        </Select>
+
+        <Select
+          value={sortBy}
+          onChange={setSortBy}
+          style={{ width: 180 }}
+        >
+          <Option value="date_desc">Date Created (Newest)</Option>
+          <Option value="date_asc">Date Created (Oldest)</Option>
+          <Option value="name_asc">Name (A-Z)</Option>
+          <Option value="name_desc">Name (Z-A)</Option>
+        </Select>
+      </div>
+
+      {/* Table feeds from the processed users variable */}
       <Table 
         columns={columns} 
-        dataSource={users} 
+        dataSource={processedUsers} 
         rowKey="id" 
         loading={loading}
         pagination={{ pageSize: 10 }}
