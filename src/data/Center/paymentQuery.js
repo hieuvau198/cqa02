@@ -42,3 +42,20 @@ export const deletePayment = async (id) => {
     return { success: true };
   } catch (error) { return { success: false, message: error.message }; }
 };
+
+
+export const getAllPayments = async () => {
+  const cacheKey = `all_payments_dashboard`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const snapshot = await getDocs(PAYMENTS_REF);
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setCache(cacheKey, data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching all payments:", error);
+    return [];
+  }
+};

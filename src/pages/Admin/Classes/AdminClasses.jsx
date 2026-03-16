@@ -187,7 +187,6 @@ export default function AdminClasses() {
 
   return (
     <div>
-      <Title level={3} style={{ marginBottom: 20 }}>Class Management</Title>
       
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <ClassFilterBar 

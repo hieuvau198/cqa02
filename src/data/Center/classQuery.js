@@ -1,5 +1,5 @@
 import { db } from "../Firebase/firebase-config";
-import { collection, query, where, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { getCache, setCache, clearCache } from "../cacheHelper";
 
 const YEARS_REF = collection(db, "cqa02", "app_data", "years");
@@ -103,7 +103,15 @@ export const getClassesByTerm = async (termId) => {
 
 export const addClass = async (data, termId) => {
   try {
-    await addDoc(CLASSES_REF, { ...data, termId, createdAt: serverTimestamp() });
+    const createdAt = serverTimestamp();
+    const newId = generateNewClassId(data.name, new Date()); 
+    
+    if (newId) {
+      await setDoc(doc(CLASSES_REF, newId), { ...data, termId, createdAt });
+    } else {
+      await addDoc(CLASSES_REF, { ...data, termId, createdAt });
+    }
+    
     clearCache("classes_");
     return { success: true };
   } catch (error) { return { success: false, message: error.message }; }
@@ -209,4 +217,102 @@ export const deleteSlot = async (id) => {
     clearCache("slots_");
     return { success: true };
   } catch (error) { return { success: false, message: error.message }; }
+};
+
+// --- NEW ID GENERATOR ---
+export const generateNewClassId = (className, dateObj) => {
+  try {
+    const year = dateObj ? dateObj.getFullYear() : new Date().getFullYear();
+    
+    // Parses names like: "Tiếng Anh 6 Tháng 3" or "Toán 8 tháng 4"
+    const match = className.match(/^(.*?)\s+(\d+)\s*tháng\s*(\d+)$/i);
+    if (!match) return null; // Fallback for unmatched formats
+    
+    const subject = match[1].trim();
+    const grade = match[2];
+    const month = match[3];
+    
+    // Map Subject string to acronym (e.g. "Tiếng Anh" -> "TA", "Toán" -> "T")
+    const subjectCode = subject
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('');
+      
+    return `CL${year}${subjectCode}${grade}T${month}`;
+  } catch (error) {
+    return null;
+  }
+};
+
+// --- MIGRATION LOGIC FOR 1 CLASS ---
+export const migrateClassId = async (oldClassId) => {
+  try {
+    const classDoc = await getDoc(doc(CLASSES_REF, oldClassId));
+    if (!classDoc.exists()) throw new Error("Class not found");
+    
+    const classData = classDoc.data();
+    const createdDate = classData.createdAt?.toDate ? classData.createdAt.toDate() : new Date();
+    const newId = generateNewClassId(classData.name, createdDate);
+    
+    if (!newId || newId === oldClassId) {
+      return { success: false, message: "Invalid name format or ID is already up-to-date." };
+    }
+    
+    const batch = writeBatch(db);
+    
+    // 1. Recreate class under new ID
+    batch.set(doc(CLASSES_REF, newId), classData);
+    
+    // 2. Delete the old class
+    batch.delete(doc(CLASSES_REF, oldClassId));
+    
+    // 3. Update all Slots referencing this class
+    const slotsQ = query(SLOTS_REF, where("classId", "==", oldClassId));
+    const slotsSnap = await getDocs(slotsQ);
+    slotsSnap.forEach(slotDoc => {
+      batch.update(doc(SLOTS_REF, slotDoc.id), { classId: newId });
+    });
+    
+    // 4. Update all Payments referencing this class
+    const PAYMENTS_REF = collection(db, "cqa02", "app_data", "payments");
+    const paymentsQ = query(PAYMENTS_REF, where("classId", "==", oldClassId));
+    const paymentsSnap = await getDocs(paymentsQ);
+    paymentsSnap.forEach(payDoc => {
+      batch.update(doc(PAYMENTS_REF, payDoc.id), { classId: newId });
+    });
+    
+    await batch.commit();
+    
+    // Clean cache
+    clearCache("classes_");
+    clearCache(`class_${oldClassId}`);
+    clearCache(`slots_${oldClassId}`);
+    clearCache(`payments_${oldClassId}`);
+    
+    return { success: true, newId, oldId: oldClassId };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// --- MIGRATION LOGIC FOR ALL CLASSES ---
+export const migrateAllClasses = async () => {
+  try {
+    const snapshot = await getDocs(CLASSES_REF);
+    let count = 0;
+    
+    for (const classDoc of snapshot.docs) {
+      const classData = classDoc.data();
+      const createdDate = classData.createdAt?.toDate ? classData.createdAt.toDate() : new Date();
+      const newId = generateNewClassId(classData.name, createdDate);
+      
+      if (newId && newId !== classDoc.id) {
+        await migrateClassId(classDoc.id);
+        count++;
+      }
+    }
+    return { success: true, count };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
 };

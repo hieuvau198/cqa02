@@ -12,6 +12,9 @@ import AdminCurriculum from '../pages/Admin/Curriculum/AdminCurriculum';
 import TeacherLayout from '../pages/Teacher/TeacherLayout';
 import TeacherClasses from '../pages/Teacher/Classes/TeacherClasses';
 
+// 1. IMPORT THE NEW DASHBOARD HERE
+import AdminDashboard from '../pages/Admin/Dashboard/AdminDashboard'; 
+
 // New Staff Imports
 import StaffLayout from '../pages/Staff/StaffLayout';
 import StaffHome from '../pages/Staff/StaffHome';
@@ -45,7 +48,10 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" />} />
-          <Route path="dashboard" element={<div>Admin Dashboard Content</div>} />
+          
+          {/* 2. REPLACE THE PLACEHOLDER DIV WITH THE NEW COMPONENT HERE */}
+          <Route path="dashboard" element={<AdminDashboard />} />
+          
           <Route path="users" element={<AdminUsers />} />
           <Route path="classes" element={<AdminClasses />} /> 
           <Route path="classes/:id" element={<ClassDetail />} />
