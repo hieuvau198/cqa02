@@ -8,6 +8,7 @@ import ProtectedRoute from './ProtectedRoute';
 import AdminUsers from '../pages/Admin/Users/AdminUsers';
 import AdminClasses from '../pages/Admin/Classes/AdminClasses';
 import ClassDetail from '../pages/Admin/Classes/ClassDetail';
+import AdminPayment from '../pages/Admin/Payment/AdminPayment';
 import AdminCurriculum from '../pages/Admin/Curriculum/AdminCurriculum';
 import TeacherLayout from '../pages/Teacher/TeacherLayout';
 import TeacherClasses from '../pages/Teacher/Classes/TeacherClasses';
@@ -55,6 +56,7 @@ const AppRoutes = () => {
           <Route path="users" element={<AdminUsers />} />
           <Route path="classes" element={<AdminClasses />} /> 
           <Route path="classes/:id" element={<ClassDetail />} />
+          <Route path="payments" element={<AdminPayment />} />
           <Route path="curriculum" element={<AdminCurriculum />} />
         </Route>
       </Route>

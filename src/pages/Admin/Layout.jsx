@@ -7,6 +7,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -72,6 +73,11 @@ const AdminLayout = () => {
               key: "/admin/classes", // <-- Add this item
               icon: <ReadOutlined />,
               label: "Lớp học",
+            },
+            {
+              key: "/admin/payments", // <-- Thêm mục này
+              icon: <DollarOutlined />,
+              label: "Học phí",
             },
             {
               key: "/admin/curriculum",
