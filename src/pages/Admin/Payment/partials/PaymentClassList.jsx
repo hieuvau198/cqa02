@@ -70,9 +70,9 @@ export default function PaymentClassList({ classes }) {
     children: <PaymentClassDetail classId={cls.id} classInfo={cls} />
   }));
 
+  
+
   return (
-    <Card>
       <Collapse items={items} />
-    </Card>
   );
 }
