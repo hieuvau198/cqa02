@@ -49,16 +49,13 @@ const StaffShifts = () => {
 
   return (
     <div style={{ padding: '20px 0' }}>
-      <div style={{ marginBottom: 24 }}>
-        <Typography.Title level={3}>Đăng Ký Ca Làm Việc</Typography.Title>
-        <Text type="secondary">Xem lịch và đăng ký các ca làm việc trong tuần</Text>
-      </div>
+      
 
       {/* Week Navigation */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, backgroundColor: '#fff', padding: '12px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
         <Button icon={<LeftOutlined />} onClick={prevWeek}>Tuần trước</Button>
         <Text strong>
-          Tuần từ {currentWeekStart.format('DD/MM/YYYY')} đến {currentWeekStart.add(6, 'day').format('DD/MM/YYYY')}
+          {currentWeekStart.format('DD/MM')} - {currentWeekStart.add(6, 'day').format('DD/MM')}
         </Text>
         <Button onClick={nextWeek}>Tuần sau <RightOutlined /></Button>
       </div>

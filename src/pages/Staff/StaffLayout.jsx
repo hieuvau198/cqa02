@@ -36,9 +36,6 @@ const StaffLayout = () => {
             <CalendarOutlined className="text-lg" />
           </button>
           
-          <Title level={4} className="!mb-0 !text-gray-800 font-semibold tracking-wide">
-            Cổng Quản Lý Trung Tâm CQA
-          </Title>
         </div>
         
         {/* Right Side: Logout Action */}
