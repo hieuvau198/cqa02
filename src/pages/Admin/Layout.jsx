@@ -8,6 +8,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   DollarOutlined,
+  ScheduleOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -79,6 +80,11 @@ const AdminLayout = () => {
               icon: <DollarOutlined />,
               label: "Học phí",
             },
+            {
+  key: "/admin/shifts",
+  icon: <ScheduleOutlined />,
+  label: "Ca làm",
+},
             {
               key: "/admin/curriculum",
               icon: <ReadOutlined />, // or another icon like BookOutlined

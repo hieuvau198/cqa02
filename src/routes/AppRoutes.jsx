@@ -15,6 +15,7 @@ import TeacherClasses from '../pages/Teacher/Classes/TeacherClasses';
 
 // 1. IMPORT THE NEW DASHBOARD HERE
 import AdminDashboard from '../pages/Admin/Dashboard/AdminDashboard'; 
+import AdminShifts from '../pages/Admin/Shifts/AdminShifts';
 
 // New Staff Imports
 import StaffLayout from '../pages/Staff/StaffLayout';
@@ -57,6 +58,7 @@ const AppRoutes = () => {
           <Route path="classes" element={<AdminClasses />} /> 
           <Route path="classes/:id" element={<ClassDetail />} />
           <Route path="payments" element={<AdminPayment />} />
+          <Route path="shifts" element={<AdminShifts />} />
           <Route path="curriculum" element={<AdminCurriculum />} />
         </Route>
       </Route>
