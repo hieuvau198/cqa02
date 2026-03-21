@@ -1,7 +1,8 @@
 import React from 'react';
 import { Layout, Typography, Button } from 'antd';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { LogoutOutlined, HomeOutlined } from '@ant-design/icons';
+// IMPORT CalendarOutlined here
+import { LogoutOutlined, HomeOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 
 const { Header, Content } = Layout;
@@ -14,7 +15,6 @@ const StaffLayout = () => {
   return (
     <Layout className="min-h-screen bg-yellow-50/30">
       
-      {/* FIXED: Added !bg-white/90 to override Ant Design's default black header */}
       <Header className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-8 !bg-white/90 backdrop-blur-md shadow-sm border-b-[3px] border-yellow-400 !h-16 leading-[normal]">
         
         {/* Left Side: Navigation & Title */}
@@ -25,6 +25,15 @@ const StaffLayout = () => {
             title="Trang chủ"
           >
             <HomeOutlined className="text-lg" />
+          </button>
+          
+          {/* NEW BUTTON: Navigate to Shifts */}
+          <button 
+            onClick={() => navigate('/staff/shifts')}
+            className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-sm cursor-pointer border-none outline-none"
+            title="Đăng ký ca làm"
+          >
+            <CalendarOutlined className="text-lg" />
           </button>
           
           <Title level={4} className="!mb-0 !text-gray-800 font-semibold tracking-wide">
