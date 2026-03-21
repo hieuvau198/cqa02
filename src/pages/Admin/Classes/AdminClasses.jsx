@@ -7,6 +7,7 @@ import { getAllUsers } from '../../../data/Users/userQuery';
 import { getGrades, getSubjects } from '../../../data/Center/sectionQuery';
 
 import ClassFilterBar from './partials/ClassFilterBar';
+import QuickAccessClassList from './partials/QuickAccessClassList'; // <-- IMPORT HERE
 import ClassBoard from './partials/ClassBoard';
 import ClassActionModal from './partials/ClassActionModal';
 
@@ -194,6 +195,11 @@ export default function AdminClasses() {
           selectedYear={selectedYear} selectedTerm={selectedTerm}
           handleSelectYear={handleSelectYear} handleSelectTerm={handleSelectTerm}
           openModal={openModal} handleDelete={handleDelete}
+        />
+
+        <QuickAccessClassList 
+          classes={classes} 
+          subjects={subjects} 
         />
 
         <ClassBoard 

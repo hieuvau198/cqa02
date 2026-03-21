@@ -45,25 +45,28 @@ export default function PaymentClassDetail({ classId, classInfo }) {
     if (classId) fetchData();
   }, [classId]);
 
-  const showDrawer = (student, record = null) => {
-    setEditingPayment(record);
-    if (record) {
-      form.setFieldsValue(record);
-    } else {
-      form.resetFields();
-      const defaultFee = classInfo?.fee || 0; 
-      form.setFieldsValue({ 
-        studentId: student.id,
-        studentName: student.name,
-        className: classInfo?.name || '',
-        status: 'Đã thanh toán', 
-        amountPaid: defaultFee,  
-        totalPrice: defaultFee, 
-        note: 'Thu học phí',
-      });
-    }
-    setDrawerVisible(true);
-  };
+  const showDrawer = (studentRow, record = null) => {
+  setEditingPayment(record);
+  if (record) {
+    // For editing an existing payment
+    form.setFieldsValue(record);
+  } else {
+    // For creating a NEW payment (Thu tiền button)
+    form.resetFields();
+    const defaultFee = classInfo?.fee || 0; 
+    
+    form.setFieldsValue({ 
+      studentId: studentRow.studentId,      // Link the ID
+      studentName: studentRow.studentName, // Auto-fill the name
+      className: classInfo?.name || '',    // Link the Class Name
+      status: 'Đã thanh toán', 
+      amountPaid: defaultFee,  
+      totalPrice: defaultFee, 
+      note: 'Thu học phí',
+    });
+  }
+  setDrawerVisible(true);
+};
 
   const handleSave = async (values) => {
     setLoading(true);
