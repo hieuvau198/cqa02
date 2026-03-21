@@ -40,6 +40,7 @@ const AdminUsers = () => {
   // --- Filter & Sort States ---
   const [searchText, setSearchText] = useState("");
   const [filterGrade, setFilterGrade] = useState(null);
+  const [filterRole, setFilterRole] = useState(null); // Add this line
   const [sortBy, setSortBy] = useState("date_desc"); // Default sort
 
   // --- Drawer States ---
@@ -78,7 +79,12 @@ const AdminUsers = () => {
       result = result.filter(u => toSafeString(u.grade) === safeFilterGrade);
     }
 
-    // 3. Sort
+    // 3. Filter by Role (Add this block)
+    if (filterRole) {
+      result = result.filter(u => u.role === filterRole);
+    }
+
+    // 4. Sort
     result.sort((a, b) => {
       if (sortBy === 'date_desc') {
         return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
@@ -96,7 +102,7 @@ const AdminUsers = () => {
     });
 
     return result;
-  }, [users, searchText, filterGrade, sortBy]);
+  }, [users, searchText, filterGrade, filterRole, sortBy]); // Added filterRole to dependencies
 
 
   // --- Drawer Actions ---
@@ -266,14 +272,27 @@ const AdminUsers = () => {
       {/* Toolbar: Search, Filter, Sort */}
       <div style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <Input.Search
-          placeholder="Search by name..."
+          placeholder="Search"
           allowClear
           onChange={(e) => setSearchText(e.target.value)}
           style={{ width: 250 }}
         />
         
+        {/* Add this Role Filter Select */}
         <Select
-          placeholder="Filter by Grade"
+          placeholder="Role"
+          allowClear
+          onChange={setFilterRole}
+          style={{ width: 150 }}
+        >
+          <Option value="Student">Student</Option>
+          <Option value="Teacher">Teacher</Option>
+          <Option value="Staff">Staff</Option>
+          <Option value="Admin">Admin</Option>
+        </Select>
+
+        <Select
+          placeholder="Grade"
           allowClear
           onChange={setFilterGrade}
           style={{ width: 150 }}
@@ -330,7 +349,7 @@ const AdminUsers = () => {
             label="Username"
             rules={[{ required: true, message: 'Please enter username' }]}
           >
-            <Input placeholder="Enter username" disabled={!!editingUser} />
+            <Input placeholder="Enter username" />
           </Form.Item>
 
           <Form.Item

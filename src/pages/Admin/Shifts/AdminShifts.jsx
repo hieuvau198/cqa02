@@ -212,15 +212,37 @@ const AdminShifts = () => {
                     <div style={{ marginBottom: '8px', color: '#555' }}>
                       <b>⏰</b> {dayjs(shift.startTime).format('HH:mm')} - {dayjs(shift.endTime).format('HH:mm')}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {shift.users && shift.users.length > 0 ? (
-                        shift.users.map(u => <Tag color="blue" key={u.id}>{u.name}</Tag>)
-                      ) : (shift.employeeName ? (
-                        <Tag color="blue">{shift.employeeName}</Tag>
-                      ) : (
-                        <Tag color="default">Chưa xếp người</Tag>
-                      ))}
+                    
+                    {/* Display Who is Assigned (Phân công) */}
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>Phân công:</Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        {shift.users && shift.users.length > 0 ? (
+                          shift.users.map(u => <Tag color="blue" key={u.id}>{u.name}</Tag>)
+                        ) : (shift.employeeName ? (
+                          <Tag color="blue">{shift.employeeName}</Tag>
+                        ) : (
+                          <Tag color="default">Chưa xếp người</Tag>
+                        ))}
+                      </div>
                     </div>
+
+                    {/* Display Who Registered (Đã đăng ký) */}
+                    <div>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        Đã đăng ký ({shift.registers ? shift.registers.length : 0}):
+                      </Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        {shift.registers && shift.registers.length > 0 ? (
+                          shift.registers.map(r => (
+                            <Tag color="green" key={r.id}>{r.name}</Tag>
+                          ))
+                        ) : (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>Chưa có ai</Text>
+                        )}
+                      </div>
+                    </div>
+                    
                   </Card>
                 ))
               )}
