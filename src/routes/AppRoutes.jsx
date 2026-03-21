@@ -21,6 +21,7 @@ import AdminShifts from '../pages/Admin/Shifts/AdminShifts';
 import StaffLayout from '../pages/Staff/StaffLayout';
 import StaffHome from '../pages/Staff/StaffHome';
 import StaffAttendance from '../pages/Staff/Attendance/StaffAttendance';
+import StaffShifts from '../pages/Staff/Shifts/StaffShifts'; // <-- ADD THIS IMPORT
 
 // Temporary placeholder for other roles
 const RoleDashboard = ({ role }) => (
@@ -68,6 +69,7 @@ const AppRoutes = () => {
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<StaffHome />} />
           <Route path="attendance" element={<StaffAttendance />} />
+          <Route path="shifts" element={<StaffShifts />} /> {/* <-- ADD THIS ROUTE */}
         </Route>
       </Route>
 
