@@ -58,7 +58,7 @@ const ShiftModal = ({ open, onCancel, onSubmit, shiftData, users }) => {
           <Input.TextArea rows={2} placeholder="Mô tả công việc trong ca..." />
         </Form.Item>
 
-        {/* Removed required true to allow empty employees */}
+        {/* Cập nhật phần này trong file ShiftModal.jsx */}
         <Form.Item name="userIds" label="Nhân viên">
           <Select 
             mode="multiple" 
@@ -67,7 +67,9 @@ const ShiftModal = ({ open, onCancel, onSubmit, shiftData, users }) => {
             optionFilterProp="children"
             allowClear
           >
-            {users.map(user => (
+            {users
+              .filter(user => user.role === 'Staff') // Lọc chỉ hiển thị những user có role là 'staff'
+              .map(user => (
               <Select.Option key={user.id} value={user.id}>
                 {user.name} ({user.username} - {user.role})
               </Select.Option>
