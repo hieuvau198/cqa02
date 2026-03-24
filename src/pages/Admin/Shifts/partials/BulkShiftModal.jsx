@@ -1,12 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Form, DatePicker, Alert } from 'antd';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
+// Import thêm các plugin cần thiết để xử lý picker="week" và custom format
+import weekOfYear from 'dayjs/plugin/weekOfYear';
+import advancedFormat from 'dayjs/plugin/advancedFormat';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 dayjs.extend(isoWeek);
+dayjs.extend(weekOfYear);
+dayjs.extend(advancedFormat);
+dayjs.extend(customParseFormat);
 
 const BulkShiftModal = ({ open, onCancel, onSubmit }) => {
   const [form] = Form.useForm();
+
+  // Reset lại form về tuần hiện tại mỗi khi mở Modal
+  useEffect(() => {
+    if (open) {
+      form.setFieldsValue({ week: dayjs() });
+    }
+  }, [open, form]);
 
   const handleFinish = (values) => {
     // Get the exact Monday of the selected week
