@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Modal, Form, DatePicker, Alert } from 'antd';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
-// Import thêm các plugin cần thiết để xử lý picker="week" và custom format
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -12,15 +11,17 @@ dayjs.extend(weekOfYear);
 dayjs.extend(advancedFormat);
 dayjs.extend(customParseFormat);
 
-const BulkShiftModal = ({ open, onCancel, onSubmit }) => {
+// Thêm props currentWeek vào
+const BulkShiftModal = ({ open, onCancel, onSubmit, currentWeek }) => {
   const [form] = Form.useForm();
 
-  // Reset lại form về tuần hiện tại mỗi khi mở Modal
+  // Reset lại form về "Tuần đang xem" mỗi khi mở Modal thay vì "tuần hiện tại" (dayjs)
   useEffect(() => {
     if (open) {
-      form.setFieldsValue({ week: dayjs() });
+      // Ưu tiên dùng currentWeek, nếu không có thì mới dùng dayjs()
+      form.setFieldsValue({ week: currentWeek || dayjs() });
     }
-  }, [open, form]);
+  }, [open, form, currentWeek]);
 
   const handleFinish = (values) => {
     // Get the exact Monday of the selected week
@@ -48,7 +49,13 @@ const BulkShiftModal = ({ open, onCancel, onSubmit }) => {
         showIcon
         style={{ marginBottom: 20 }}
       />
-      <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ week: dayjs() }}>
+      {/* Sửa lại initialValues ở Form */}
+      <Form 
+        form={form} 
+        layout="vertical" 
+        onFinish={handleFinish} 
+        initialValues={{ week: currentWeek || dayjs() }}
+      >
         <Form.Item 
           name="week" 
           label="Chọn Tuần để áp dụng" 

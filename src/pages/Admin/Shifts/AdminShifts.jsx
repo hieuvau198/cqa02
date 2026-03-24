@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Space, Popconfirm, message, Card, Typography, Tag } from 'antd';
+import { Button, Space, Popconfirm, message, Card, Typography, Tag, Checkbox } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, LeftOutlined, RightOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -25,6 +25,8 @@ const AdminShifts = () => {
   // Ensure we start exactly on Monday of the current ISO week
   const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf('isoWeek'));
 
+  const [selectedShiftIds, setSelectedShiftIds] = useState([]);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -43,6 +45,24 @@ const AdminShifts = () => {
       fetchData();
     } else {
       message.error('Lỗi khi xóa ca làm việc');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const hideLoading = message.loading('Đang xóa các ca làm việc...', 0);
+    try {
+      // Execute all deletions simultaneously
+      await Promise.all(selectedShiftIds.map(id => deleteShift(id)));
+      
+      hideLoading();
+      message.success(`Đã xóa thành công ${selectedShiftIds.length} ca làm việc!`);
+      
+      // Clear selections and refresh data
+      setSelectedShiftIds([]);
+      fetchData();
+    } catch (error) {
+      hideLoading();
+      message.error('Có lỗi xảy ra khi xóa nhiều ca làm việc.');
     }
   };
 
@@ -151,6 +171,18 @@ const AdminShifts = () => {
     <div style={{ padding: '20px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Space>
+          {/* New Bulk Delete Button */}
+          {selectedShiftIds.length > 0 && (
+            <Popconfirm 
+              title={`Bạn có chắc chắn muốn xóa ${selectedShiftIds.length} ca làm việc đã chọn?`} 
+              onConfirm={handleBulkDelete}
+            >
+              <Button type="primary" danger icon={<DeleteOutlined />}>
+                Xóa {selectedShiftIds.length} ca đã chọn
+              </Button>
+            </Popconfirm>
+          )}
+          
           <Button type="dashed" icon={<CalendarOutlined />} onClick={() => setIsBulkModalOpen(true)}>
             Thêm Tuần
           </Button>
@@ -198,8 +230,26 @@ const AdminShifts = () => {
                   <Card 
                     key={shift.id} 
                     size="small" 
-                    style={{ marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
-                    title={<Text strong>{shift.name}</Text>}
+                    style={{ 
+                      marginBottom: 12, 
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      border: selectedShiftIds.includes(shift.id) ? '1px solid #ff4d4f' : undefined // Optional: highlight selected cards
+                    }}
+                    title={
+                      <Space>
+                        <Checkbox 
+                          checked={selectedShiftIds.includes(shift.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedShiftIds(prev => [...prev, shift.id]);
+                            } else {
+                              setSelectedShiftIds(prev => prev.filter(id => id !== shift.id));
+                            }
+                          }}
+                        />
+                        <Text strong>{shift.name}</Text>
+                      </Space>
+                    }
                     extra={
                       <Space size="small">
                         <Button size="small" type="text" icon={<EditOutlined />} onClick={() => { setEditingShift(shift); setIsShiftModalOpen(true); }} />
@@ -257,12 +307,15 @@ const AdminShifts = () => {
         onSubmit={handleSingleShiftSubmit}
         shiftData={editingShift}
         users={users}
+        currentWeek={currentWeekStart} 
       />
 
+      {/* Cập nhật thêm thuộc tính currentWeek vào BulkShiftModal */}
       <BulkShiftModal
         open={isBulkModalOpen}
         onCancel={() => setIsBulkModalOpen(false)}
         onSubmit={handleBulkShiftSubmit}
+        currentWeek={currentWeekStart}
       />
     </div>
   );
