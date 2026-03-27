@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Space, Popconfirm, message, Card, Typography, Tag, Checkbox } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined, LeftOutlined, RightOutlined, CalendarOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button, Space, Popconfirm, message, Card, Typography, Tag, Checkbox, Divider } from 'antd';
+import { EditOutlined, DeleteOutlined, PlusOutlined, LeftOutlined, RightOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import { getAllShifts, addShift, updateShift, deleteShift } from '../../../data/Shifts/shiftQuery';
@@ -162,10 +162,34 @@ const AdminShifts = () => {
   // --- Week Navigation --- //
   const nextWeek = () => setCurrentWeekStart(prev => prev.add(1, 'week'));
   const prevWeek = () => setCurrentWeekStart(prev => prev.subtract(1, 'week'));
-  const currentWeek = () => setCurrentWeekStart(dayjs().startOf('isoWeek'));
 
   const weekDays = Array.from({ length: 7 }).map((_, i) => currentWeekStart.add(i, 'day'));
   const dayNamesVN = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
+  // --- Calculate Weekly Statistics --- //
+  const weeklyStats = useMemo(() => {
+    const stats = {};
+    
+    // Filter shifts that belong to the currently displayed week
+    const currentWeekShifts = shifts.filter(shift => 
+      weekDays.some(day => dayjs(shift.startTime).isSame(day, 'day'))
+    );
+
+    // Count shifts per user
+    currentWeekShifts.forEach(shift => {
+      if (shift.users && shift.users.length > 0) {
+        shift.users.forEach(user => {
+          if (!stats[user.id]) {
+            stats[user.id] = { id: user.id, name: user.name, count: 0 };
+          }
+          stats[user.id].count += 1;
+        });
+      }
+    });
+
+    // Return as array sorted by shift count (descending)
+    return Object.values(stats).sort((a, b) => b.count - a.count);
+  }, [shifts, currentWeekStart]);
 
   return (
     <div style={{ padding: '20px 0' }}>
@@ -195,7 +219,6 @@ const AdminShifts = () => {
       {/* Week Navigation */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, backgroundColor: '#fff', padding: '12px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
         <Button icon={<LeftOutlined />} onClick={prevWeek}>Tuần trước</Button>
-        
         <Button onClick={nextWeek}>Tuần sau <RightOutlined /></Button>
       </div>
 
@@ -233,7 +256,7 @@ const AdminShifts = () => {
                     style={{ 
                       marginBottom: 12, 
                       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      border: selectedShiftIds.includes(shift.id) ? '1px solid #ff4d4f' : undefined // Optional: highlight selected cards
+                      border: selectedShiftIds.includes(shift.id) ? '1px solid #ff4d4f' : undefined 
                     }}
                     title={
                       <Space>
@@ -301,6 +324,41 @@ const AdminShifts = () => {
         })}
       </div>
 
+      {/* --- Weekly Statistics Section --- */}
+      <Card 
+        title={<span><UserOutlined /> Thống kê nhân viên trong tuần</span>} 
+        style={{ marginTop: 24, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+      >
+        {weeklyStats.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            {weeklyStats.map(stat => (
+              <div 
+                key={stat.id} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  padding: '12px 20px', 
+                  background: '#f0f5ff', 
+                  border: '1px solid #adc6ff',
+                  borderRadius: '8px',
+                  minWidth: '180px'
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <Text strong style={{ fontSize: '15px', color: '#1d39c4' }}>{stat.name}</Text>
+                </div>
+                <Tag color="blue" style={{ margin: 0, fontSize: '14px', padding: '2px 8px', borderRadius: '4px' }}>
+                  {stat.count} ca
+                </Tag>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Text type="secondary">Chưa có nhân sự nào được phân công trong tuần này.</Text>
+        )}
+      </Card>
+
       <ShiftModal
         open={isShiftModalOpen}
         onCancel={() => setIsShiftModalOpen(false)}
@@ -310,7 +368,6 @@ const AdminShifts = () => {
         currentWeek={currentWeekStart} 
       />
 
-      {/* Cập nhật thêm thuộc tính currentWeek vào BulkShiftModal */}
       <BulkShiftModal
         open={isBulkModalOpen}
         onCancel={() => setIsBulkModalOpen(false)}
